@@ -1,0 +1,102 @@
+@baseUrl = http://localhost:3000/api/v1
+
+### Health Check
+GET http://localhost:3000/health
+
+### ----------------------------------------
+### AUTHENTICATION
+### ----------------------------------------
+
+### 1. Register a new user
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+    "email": "testuser@example.com",
+    "password": "Password123",
+    "firstName": "Test",
+    "lastName": "User",
+    "phone": "9876543210"
+}
+
+### 2. Login User
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "testuser@example.com",
+    "password": "Password123"
+}
+
+### Extract Token from Login Response
+@token = {{login.response.body.data.tokens.accessToken}}
+
+### ----------------------------------------
+### CAPABILITIES UPGRADE
+### ----------------------------------------
+
+### 2a. Request Upgrade to Owner/Provider
+# This flags the account to be upgraded. Admin must approve.
+POST {{baseUrl}}/users/upgrade-request
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "documentType": "aadhaar",
+    "documentNumber": "123456789012",
+    "documentImage": "https://example.com/doc.jpg"
+}
+
+### ----------------------------------------
+### HOUSING
+### ----------------------------------------
+
+### 3. List All Houses
+GET {{baseUrl}}/houses
+Content-Type: application/json
+
+### 4. Create a Listing (Requires Token)
+POST {{baseUrl}}/houses
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "title": "Beautiful 2BHK in Downtown",
+    "description": "A fully furnished 2BHK apartment with great amenities.",
+    "type": "APARTMENT",
+    "addressLine1": "123 Main Street",
+    "city": "Metropolis",
+    "state": "NY",
+    "pincode": "10001",
+    "latitude": 40.7128,
+    "longitude": -74.0060,
+    "rent": 1500,
+    "deposit": 3000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "area": 1200,
+    "furnishing": "FURNISHED",
+    "amenities": ["WIFI", "GYM", "PARKING"],
+    "preferredTenants": ["FAMILY", "BACHELOR"],
+    "petsAllowed": true,
+    "availableFrom": "2026-05-01T00:00:00Z"
+}
+
+### ----------------------------------------
+### SERVICES
+### ----------------------------------------
+
+### 5. Get Move-in Services
+GET {{baseUrl}}/services
+Content-Type: application/json
+
+### ----------------------------------------
+### FLATMATES
+### ----------------------------------------
+
+### 6. Search for Flatmates
+GET {{baseUrl}}/flatmates/search
+Content-Type: application/json
+Authorization: Bearer {{token}}

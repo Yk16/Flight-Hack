@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "settlemate-mobile",
+    "slug": "settlemate-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.svg",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.svg"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

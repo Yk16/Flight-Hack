@@ -1,0 +1,1 @@
+export { default as agreementRoutes } from './agreement.routes';

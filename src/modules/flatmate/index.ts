@@ -1,0 +1,1 @@
+export { default as flatmateRoutes } from './flatmate.routes';

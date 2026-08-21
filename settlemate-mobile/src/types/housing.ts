@@ -1,0 +1,40 @@
+export interface House {
+  id: string;
+  title: string;
+  description?: string;
+  type?: 'APARTMENT' | 'INDEPENDENT_HOUSE' | 'VILLA' | 'ROOM' | 'PG' | 'SHARED_ROOM' | 'STUDIO';
+  addressLine1?: string;
+  addressLine2?: string;
+  state?: string;
+  rent: number;
+  deposit: number;
+  city: string;
+  pincode?: string;
+  latitude?: number;
+  longitude?: number;
+  maintenanceCharges?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  floor?: number;
+  totalFloors?: number;
+  furnishing?: 'FURNISHED' | 'SEMI_FURNISHED' | 'UNFURNISHED';
+  amenities?: string[];
+  images?: string[];
+  preferredTenants?: string[];
+  petsAllowed?: boolean;
+  status?: 'AVAILABLE' | 'RENTED' | 'INACTIVE' | 'UNDER_MAINTENANCE';
+  availableFrom?: string;
+  viewCount?: number;
+  inquiryCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  owner?: {
+    id: number;
+    name?: string;
+    avatar?: string;
+    trustScore?: number;
+    phone?: string;
+    aadhaarVerified?: boolean;
+  };
+}

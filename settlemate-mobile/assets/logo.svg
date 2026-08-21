@@ -1,0 +1,26 @@
+<svg width="500" height="200" viewBox="0 0 500 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Definitions for Gradients -->
+  <defs>
+    <linearGradient id="logoGradient" x1="20" y1="40" x2="80" y2="160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2DD4BF"/>
+      <stop offset="1" stop-color="#0D9488"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Modern Emblem: The S-House Anchor -->
+  <path d="M50 40 L85 65 V130 C85 145 75 160 50 160 C25 160 15 145 15 130 H30 C30 140 35 145 50 145 C65 145 70 140 70 130 V75 L50 60 L30 75 V110 H15 V65 L50 40Z" 
+        fill="url(#logoGradient)" />
+  
+  <!-- Subtle Dot (Representing the User/Location) -->
+  <circle cx="50" cy="95" r="6" fill="#0F172A" />
+
+  <!-- Logo Text -->
+  <text x="110" y="115" fill="#0F172A" style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 700; font-size: 52px; letter-spacing: -1px;">
+    Settle<tspan fill="#0D9488">Mate</tspan>
+  </text>
+  
+  <!-- Tagline -->
+  <text x="112" y="145" fill="#64748B" style="font-family: 'Segoe UI', Roboto, sans-serif; font-weight: 400; font-size: 16px; letter-spacing: 2px; text-transform: uppercase;">
+    Smart Housing. Seamless Living.
+  </text>
+</svg>

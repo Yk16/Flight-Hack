@@ -1,0 +1,456 @@
+// Prisma schema for SettleMate - MySQL version
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// NOTE: This schema stores several status and type fields as plain strings.
+// Valid values are documented in comments.
+// ============================================
+
+// ============================================
+// USER MODEL
+// Unified privileges: isAdmin, isOwner, isProvider
+// AccountStatus: PENDING | VERIFIED | BLOCKED
+// ============================================
+
+model User {
+  id           Int     @id @default(autoincrement())
+  email        String? @unique
+  phone        String? @unique
+  passwordHash String?
+
+  // Independent Boolean Permissions (Unified Login)
+  isAdmin    Boolean @default(false)
+  isOwner    Boolean @default(false)
+  isProvider Boolean @default(false)
+
+  status String @default("PENDING")
+
+  // Profile Information
+  name String?
+
+  avatar      String?
+  dateOfBirth DateTime?
+  gender      String?
+  occupation  String?
+
+  // KYC Information
+  aadhaarVerified Boolean @default(false)
+  panVerified     Boolean @default(false)
+  kycDocuments    String  @default("[]") // JSON array of strings
+
+  // Trust & Security
+  trustScore    Float     @default(0)
+  lastLoginAt   DateTime?
+  loginAttempts Int       @default(0)
+  lockedUntil   DateTime?
+
+  // OAuth
+  oauthProvider String?
+  oauthId       String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  refreshTokens   RefreshToken[]
+  otpCodes        OTPCode[]
+  auditLogs       AuditLog[]
+  houses          House[]
+  bookings        Booking[]
+  flatmateProfile FlatmateProfile?
+  agreements      Agreement[]       @relation("TenantAgreements")
+  ownerAgreements Agreement[]       @relation("OwnerAgreements")
+  payments        Payment[]
+  serviceListings ServiceProvider[]
+  serviceBookings ServiceBooking[]
+  reviewsWritten  Review[]          @relation("AuthoredReviews")
+  reviewsReceived Review[]          @relation("TargetUserReviews")
+  messages        Message[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([isAdmin, status])
+  @@index([isOwner, status])
+  @@index([isProvider, status])
+  @@map("users")
+}
+
+// ============================================
+// REFRESH TOKEN MODEL
+// ============================================
+
+model RefreshToken {
+  id         Int       @id @default(autoincrement())
+  token      String    @unique
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceInfo String?
+  ipAddress  String?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// ============================================
+// OTP CODE MODEL
+// OTPPurpose: LOGIN | REGISTRATION | PASSWORD_RESET | AGREEMENT_SIGN
+// ============================================
+
+model OTPCode {
+  id        Int      @id @default(autoincrement())
+  code      String
+  phone     String
+  purpose   String // LOGIN | REGISTRATION | PASSWORD_RESET | AGREEMENT_SIGN
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone, purpose])
+  @@index([code, phone])
+  @@map("otp_codes")
+}
+
+// ============================================
+// AUDIT LOG MODEL
+// ============================================
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  resource  String
+  details   String? // JSON string
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================
+// HOUSE MODEL
+// HouseType: APARTMENT | INDEPENDENT_HOUSE | VILLA | PG | SHARED_ROOM | STUDIO
+// FurnishingStatus: FURNISHED | SEMI_FURNISHED | UNFURNISHED
+// HouseStatus: AVAILABLE | RENTED | INACTIVE | UNDER_MAINTENANCE
+// ============================================
+
+model House {
+  id      Int  @id @default(autoincrement())
+  ownerId Int
+  owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Basic Information
+  title       String
+  description String?
+  type        String // HouseType
+
+  // Address
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  pincode      String
+  latitude     Float?
+  longitude    Float?
+
+  // Pricing
+  rent               Int // Monthly rent in smallest currency unit
+  deposit            Int // Security deposit
+  maintenanceCharges Int? // Monthly maintenance
+
+  // Property Details
+  bedrooms    Int  @default(1)
+  bathrooms   Int  @default(1)
+  area        Int? // Square feet
+  floor       Int?
+  totalFloors Int?
+
+  // Features
+  furnishing String @default("UNFURNISHED") // FurnishingStatus
+  amenities  String @default("[]") // JSON array
+  images     String @default("[]") // JSON array
+
+  // Preferences
+  preferredTenants String  @default("[]") // JSON array e.g. ["family","bachelor"]
+  petsAllowed      Boolean @default(false)
+
+  // Availability
+  status        String   @default("AVAILABLE") // HouseStatus
+  availableFrom DateTime @default(now())
+
+  // Metrics
+  viewCount    Int @default(0)
+  inquiryCount Int @default(0)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  bookings   Booking[]
+  agreements Agreement[]
+  reviews    Review[]
+
+  @@index([ownerId])
+  @@index([city, status])
+  @@index([rent])
+  @@index([type, furnishing])
+  @@index([status, availableFrom])
+  @@map("houses")
+}
+
+// ============================================
+// BOOKING MODEL
+// BookingStatus: REQUESTED | ACCEPTED | REJECTED | CANCELLED
+// ============================================
+
+model Booking {
+  id      Int   @id @default(autoincrement())
+  houseId Int
+  house   House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  userId  Int // The tenant
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status       String    @default("REQUESTED")
+  message      String?
+  checkInDate  DateTime?
+  checkOutDate DateTime?
+
+  agreements Agreement[]
+  payments   Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([houseId])
+  @@index([userId])
+  @@map("bookings")
+}
+
+// ============================================
+// FLATMATE PROFILE MODEL
+// ============================================
+
+model FlatmateProfile {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  budget     Int // Max budget
+  lifestyle  String    @default("[]") // JSON array (e.g., ["smoker", "non-vegetarian"])
+  lookingFor String    @default("[]") // JSON array of desired roommate traits
+  occupation String?
+  bio        String?
+  moveInDate DateTime?
+
+  // Location preferences
+  city        String?
+  state       String?
+  preferredLocation String? // Specific area or neighborhood
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("flatmate_profiles")
+}
+
+// ============================================
+// AGREEMENT MODEL
+// AgreementStatus: DRAFT | SIGNED | ACTIVE | EXPIRED
+// ============================================
+
+model Agreement {
+  id        Int     @id @default(autoincrement())
+  bookingId Int
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  tenantId Int
+  tenant   User  @relation("TenantAgreements", fields: [tenantId], references: [id])
+  ownerId  Int
+  owner    User  @relation("OwnerAgreements", fields: [ownerId], references: [id])
+  houseId  Int
+  house    House @relation(fields: [houseId], references: [id], onDelete: NoAction)
+
+  status        String   @default("DRAFT")
+  documentUrl   String? // PDF link
+  rentAmount    Int
+  depositAmount Int
+  startDate     DateTime
+  endDate       DateTime
+  terms         String? // JSON string or plain text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([tenantId])
+  @@index([ownerId])
+  @@map("agreements")
+}
+
+// ============================================
+// PAYMENT MODEL
+// PaymentType: RENT | DEPOSIT | SERVICE | PLATFORM_FEE
+// PaymentStatus: PENDING | SUCCESS | FAILED
+// ============================================
+
+model Payment {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  type     String // RENT, DEPOSIT, SERVICE
+  amount   Int
+  currency String @default("INR")
+  status   String @default("PENDING")
+
+  providerId String? // e.g. Razorpay Order ID
+  paymentId  String? // e.g. Razorpay Payment ID
+
+  // Optional relations depending on payment type
+  bookingId        Int?
+  booking          Booking?        @relation(fields: [bookingId], references: [id])
+  serviceBookingId Int?
+  serviceBooking   ServiceBooking? @relation(fields: [serviceBookingId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([providerId])
+  @@map("payments")
+}
+
+// ============================================
+// SERVICE PROVIDER / LISTING MODEL
+// Type: MAID | COOK | LAUNDRY | FURNITURE | APPLIANCE
+// ProviderStatus: PENDING | APPROVED | REJECTED
+// ============================================
+
+model ServiceProvider {
+  id         Int  @id @default(autoincrement())
+  providerId Int
+  provider   User @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  type         String
+  title        String
+  description  String?
+  price        Int
+  pricingModel String  @default("PER_MONTH") // PER_MONTH | PER_JOB | ONE_TIME
+  images       String  @default("[]") // JSON array
+  
+  city  String?
+  state String?
+  
+  status       String  @default("PENDING") // PENDING | APPROVED | REJECTED
+  rejectionReason String? // Reason if rejected
+
+  bookings ServiceBooking[]
+  reviews  Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([providerId])
+  @@index([status])
+  @@map("service_providers")
+}
+
+// ============================================
+// SERVICE BOOKING MODEL
+// Status: REQUESTED | ACCEPTED | COMPLETED | CANCELLED
+// ============================================
+
+model ServiceBooking {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  listingId Int
+  listing   ServiceProvider @relation(fields: [listingId], references: [id])
+
+  status      String    @default("REQUESTED")
+  startDate   DateTime?
+  endDate     DateTime?
+  totalAmount Int
+
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([listingId])
+  @@map("service_bookings")
+}
+
+// ============================================
+// CHAT & MESSAGING MODELS
+// ============================================
+
+model Message {
+  id       Int  @id @default(autoincrement())
+  senderId Int
+  sender   User @relation(fields: [senderId], references: [id])
+
+  roomId  String // A custom ID string: "chat-user1-user2" or flatmate group ID
+  content String
+  isRead  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([roomId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+// ============================================
+// REVIEW MODEL
+// ============================================
+
+model Review {
+  id       Int  @id @default(autoincrement())
+  authorId Int
+  author   User @relation("AuthoredReviews", fields: [authorId], references: [id])
+
+  // A review can optionally target a user, house, or service provider
+  targetUserId Int?
+  targetUser   User? @relation("TargetUserReviews", fields: [targetUserId], references: [id])
+
+  houseId Int?
+  house   House? @relation(fields: [houseId], references: [id])
+
+  serviceId Int?
+  service   ServiceProvider? @relation(fields: [serviceId], references: [id])
+
+  rating  Int // 1-5 scale
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([targetUserId])
+  @@index([houseId])
+  @@index([serviceId])
+  @@map("reviews")
+}

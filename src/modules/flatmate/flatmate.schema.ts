@@ -1,0 +1,5 @@
+import { z } from 'zod';
+export const updateFlatmateProfileSchema = { body: z.object({ budget: z.number().int().min(0).optional(), lifestyle: z.array(z.string()).optional(), lookingFor: z.array(z.string()).optional(), occupation: z.string().optional(), bio: z.string().optional(), moveInDate: z.string().datetime().optional(), city: z.string().optional(), state: z.string().optional(), preferredLocation: z.string().optional() }) };
+export const searchFlatmatesSchema = { query: z.object({ minBudget: z.string().optional().transform(v => (v ? parseInt(v) : undefined)), maxBudget: z.string().optional().transform(v => (v ? parseInt(v) : undefined)), lifestyle: z.string().optional(), city: z.string().optional(), state: z.string().optional(), page: z.string().optional().transform(v => (v ? parseInt(v) : 1)), limit: z.string().optional().transform(v => (v ? parseInt(v) : 10)) }) };
+export type UpdateFlatmateProfileInput = z.infer<typeof updateFlatmateProfileSchema.body>;
+export type SearchFlatmatesQuery = z.infer<typeof searchFlatmatesSchema.query>;
