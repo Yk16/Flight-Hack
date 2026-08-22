@@ -32,16 +32,32 @@ export const RegisterScreen = ({ navigation }: any) => {
       const data = response.data?.data;
       if (data?.user && data?.accessToken) {
         await login(data.user, data.accessToken, data.refreshToken);
+        // Create initial flatmate profile in background
+        apiClient.post('/flatmates/me', {
+          budget: 15000,
+          lifestyle: ['Clean', 'Friendly'],
+          lookingFor: ['Respectful', 'Working Professional'],
+        }).catch(() => {});
       } else {
-        Alert.alert('Success', 'Registration successful! Please log in.');
+        if (Platform.OS === 'web') {
+          window.alert('Registration successful! Please log in.');
+        } else {
+          Alert.alert('Success', 'Registration successful! Please log in.');
+        }
         navigation.goBack();
       }
     } catch (error: any) {
       console.error(error);
-      Alert.alert(
-        'Registration Failed', 
-        error.displayMessage || error.response?.data?.error?.message || error.response?.data?.message || 'Server error occurred during registration.'
-      );
+      const errMsg =
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        error.displayMessage ||
+        'Server error occurred during registration.';
+      if (Platform.OS === 'web') {
+        window.alert(`Registration Failed: ${errMsg}`);
+      } else {
+        Alert.alert('Registration Failed', errMsg);
+      }
     } finally {
       setIsLoading(false);
     }

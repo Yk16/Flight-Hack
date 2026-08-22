@@ -144,73 +144,6 @@ export const ChatListScreen = () => {
               ) : null}
             </View>
 
-            {/* Flatmates Nearby / Actively Looking Section */}
-            {activePeople.length > 0 && (
-              <View style={styles.activeSection}>
-                <View style={styles.sectionRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="people" size={18} color={COLORS.primary} />
-                    <Text style={styles.sectionTitle}>Flatmates Nearby</Text>
-                  </View>
-                  <Text style={styles.sectionMeta}>{activePeople.length} looking near you</Text>
-                </View>
-                <FlatList
-                  data={activePeople}
-                  keyExtractor={(item) => `active-${item.id}`}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.activeListContent}
-                  renderItem={({ item }) => {
-                    const name = item.user?.name || item.user?.firstName || 'User';
-                    const avatar = item.user?.avatar;
-                    const location = item.preferredLocation || item.city || 'Ahmedabad';
-                    const budget = item.budget ? `₹${Number(item.budget).toLocaleString('en-IN')}/mo` : '₹18,000/mo';
-
-                    return (
-                      <TouchableOpacity
-                        style={styles.nearbyFlatmateCard}
-                        onPress={() => startChatWithPerson(item)}
-                        activeOpacity={0.8}
-                      >
-                        <View style={styles.nearbyAvatarWrap}>
-                          {avatar ? (
-                            <Image source={{ uri: avatar }} style={styles.nearbyAvatar} />
-                          ) : (
-                            <View style={styles.nearbyAvatarFallback}>
-                              <Text style={styles.activeAvatarText}>{getInitials(name)}</Text>
-                            </View>
-                          )}
-                          <View style={styles.activeGreenDot} />
-                        </View>
-                        <Text style={styles.nearbyName} numberOfLines={1}>
-                          {name}
-                        </Text>
-                        <Text style={styles.nearbyRole} numberOfLines={1}>
-                          {item.occupation || 'Professional'}
-                        </Text>
-                        <View style={styles.nearbyLocationRow}>
-                          <Ionicons name="location-sharp" size={11} color={COLORS.textMuted} />
-                          <Text style={styles.nearbyLocationText} numberOfLines={1}>
-                            {location.split('/')[0].trim()}
-                          </Text>
-                        </View>
-                        <View style={styles.nearbyBudgetBadge}>
-                          <Text style={styles.nearbyBudgetText}>{budget}</Text>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.nearbyChatBtn}
-                          onPress={() => startChatWithPerson(item)}
-                        >
-                          <Ionicons name="chatbubble" size={12} color={COLORS.surface} />
-                          <Text style={styles.nearbyChatBtnText}>Chat</Text>
-                        </TouchableOpacity>
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-              </View>
-            )}
-
             <FlatList
               data={FILTERS}
               keyExtractor={(item) => item}
@@ -248,33 +181,66 @@ export const ChatListScreen = () => {
               <Ionicons name="chatbubbles-outline" size={44} color={COLORS.primary} />
               <Text style={styles.emptyTitle}>Start Chat with Flatmates</Text>
               <Text style={styles.emptyText}>
-                Tap any nearby flatmate above or choose someone below to say hi!
+                Connect with active flatmates looking for shared spaces nearby.
               </Text>
+
               {activePeople.length > 0 && (
                 <View style={styles.quickStartFlatmatesList}>
                   {activePeople.slice(0, 3).map((person) => {
                     const name = person.user?.name || person.user?.firstName || 'Flatmate';
+                    const avatar = person.user?.avatar;
+                    const location = person.preferredLocation || person.city || 'Ahmedabad';
+                    const budget = person.budget ? `₹${Number(person.budget).toLocaleString('en-IN')}/mo` : '₹15,000/mo';
+
                     return (
-                      <TouchableOpacity
-                        key={`quick-${person.id}`}
-                        style={styles.quickStartCard}
-                        onPress={() => startChatWithPerson(person)}
-                        activeOpacity={0.8}
-                      >
-                        <View style={styles.quickAvatar}>
-                          <Text style={styles.quickAvatarText}>{getInitials(name)}</Text>
-                        </View>
+                      <View key={`quick-${person.id}`} style={styles.quickStartCard}>
+                        {avatar ? (
+                          <Image source={{ uri: avatar }} style={styles.quickAvatarImg} />
+                        ) : (
+                          <View style={styles.quickAvatar}>
+                            <Text style={styles.quickAvatarText}>{getInitials(name)}</Text>
+                          </View>
+                        )}
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.quickName}>{name}</Text>
-                          <Text style={styles.quickRole}>{person.occupation || 'Flatmate'} • {person.preferredLocation || 'Ahmedabad'}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Text style={styles.quickName} numberOfLines={1}>{name}</Text>
+                            <Text style={styles.quickBudgetText}>{budget}</Text>
+                          </View>
+                          <Text style={styles.quickRole} numberOfLines={1}>
+                            {person.occupation || 'Professional'} • {location.split('/')[0].trim()}
+                          </Text>
                         </View>
-                        <View style={styles.quickChatBadge}>
-                          <Ionicons name="chatbubble" size={14} color={COLORS.surface} />
-                          <Text style={styles.quickChatBadgeText}>Say Hi</Text>
+                        <View style={styles.quickActionGroup}>
+                          <TouchableOpacity
+                            style={styles.quickProfileBtn}
+                            onPress={() => navigation.navigate('FlatmateViewProfile', { profile: person })}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="person-outline" size={13} color={COLORS.primary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.quickChatBadge}
+                            onPress={() => startChatWithPerson(person)}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="chatbubble" size={12} color={COLORS.surface} />
+                            <Text style={styles.quickChatBadgeText}>Chat</Text>
+                          </TouchableOpacity>
                         </View>
-                      </TouchableOpacity>
+                      </View>
                     );
                   })}
+
+                  {/* Find More Flatmates Button */}
+                  <TouchableOpacity
+                    style={styles.findMoreBtn}
+                    onPress={() => navigation.navigate('FlatmateBrowse')}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="compass-outline" size={18} color={COLORS.surface} />
+                    <Text style={styles.findMoreBtnText}>Find More Flatmates</Text>
+                    <Ionicons name="arrow-forward" size={16} color={COLORS.surface} />
+                  </TouchableOpacity>
                 </View>
               )}
             </View>
@@ -663,15 +629,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
-    gap: SPACING.sm,
+    gap: 10,
   },
   quickAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: `${COLORS.primary}18`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -685,23 +652,70 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body2,
     fontWeight: '700',
     color: COLORS.text,
+    fontSize: 14,
   },
   quickRole: {
     fontSize: 11,
     color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  quickAvatarImg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+  },
+  quickBudgetText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  quickActionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  quickProfileBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: `${COLORS.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   quickChatBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: BORDER_RADIUS.md,
   },
   quickChatBadgeText: {
     color: COLORS.surface,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
+  },
+  findMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    marginTop: SPACING.xs,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  findMoreBtnText: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '700',
+    color: COLORS.surface,
   },
 });

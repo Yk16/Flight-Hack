@@ -74,8 +74,26 @@ export const ChatScreen = () => {
       socket.on('receive_message', (msg: MessageActionItem) => {
         if (msg.roomId === roomId) {
           setMessages((prev) => {
-            const exists = prev.some((m) => m.id === msg.id);
-            if (exists) return prev;
+            // Check if exact message id already exists
+            const exactExists = prev.some((m) => m.id === msg.id);
+            if (exactExists) return prev;
+
+            // Check if this incoming message matches our own temporary optimistic message
+            const tempIdx = prev.findIndex(
+              (m) =>
+                m.senderId === msg.senderId &&
+                m.content === msg.content &&
+                typeof m.id === 'number' &&
+                m.id > 1000000000000 // Temporary Date.now() timestamp
+            );
+
+            if (tempIdx !== -1) {
+              // Replace optimistic temp bubble with confirmed DB message
+              const copy = [...prev];
+              copy[tempIdx] = msg;
+              return copy;
+            }
+
             return [...prev, msg];
           });
           socket.emit('mark_read', { roomId });
@@ -197,15 +215,17 @@ export const ChatScreen = () => {
       replyToText: replyingTo?.content ? replyingTo.content.slice(0, 80) : undefined,
     };
 
-    // Emit over socket if connected for instant real-time sync across devices
+    // Emit over socket if connected (which saves to DB and broadcasts to room)
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('send_message', payload);
     } else {
-      // Guaranteed REST fallback persistence
+      // Fallback REST endpoint only if socket is disconnected
       try {
-        await apiClient.post('/chat/messages', payload);
+        apiClient.post('/chat/messages', payload).catch((err) => {
+          console.error('[ChatScreen] Error saving message to database:', err);
+        });
       } catch (e) {
-        console.error('[ChatScreen] Error sending message via REST:', e);
+        console.error('[ChatScreen] Exception saving message:', e);
       }
     }
 
@@ -251,11 +271,7 @@ export const ChatScreen = () => {
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => {
-              if (navigation.canGoBack()) {
-                navigation.goBack();
-              } else {
-                navigation.navigate('ChatInbox');
-              }
+              navigation.navigate('Chat', { screen: 'ChatInbox' });
             }}
           >
             <Ionicons name="chevron-back" size={24} color={COLORS.text} />

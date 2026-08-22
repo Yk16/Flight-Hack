@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ChatListScreen } from '../screens/ChatListScreen';
 import { ChatScreen } from '../screens/ChatScreen';
+import { FlatmateBrowseScreen } from '../screens/FlatmateBrowseScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -10,6 +11,7 @@ export const ChatNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ChatInbox" component={ChatListScreen} />
       <Stack.Screen name="ChatThread" component={ChatScreen} />
+      <Stack.Screen name="FlatmateBrowse" component={FlatmateBrowseScreen} />
     </Stack.Navigator>
   );
 };

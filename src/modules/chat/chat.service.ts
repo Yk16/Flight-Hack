@@ -29,13 +29,17 @@ export class ChatService {
      * Save a new message with optional reply reference
      */
     async saveMessage(senderId: number, roomId: string, content: string, replyToId?: number, replyToText?: string) {
+        const parsedSenderId = Number(senderId);
+        const parsedRoomId = String(roomId || 'chat-general');
+        const parsedContent = String(content || '');
+
         const message = await (prisma.message as any).create({
             data: {
-                senderId,
-                roomId,
-                content,
+                senderId: parsedSenderId,
+                roomId: parsedRoomId,
+                content: parsedContent,
                 replyToId: replyToId ? Number(replyToId) : null,
-                replyToText: replyToText || null,
+                replyToText: replyToText ? String(replyToText) : null,
             },
             include: {
                 sender: {
@@ -127,16 +131,17 @@ export class ChatService {
      * Get user's active chat conversations with last message & participant info
      */
     async getUserConversations(userId: number) {
-        // Find all messages where user participated or room matches user ID
-        const userStr = String(userId);
+        const parsedUserId = Number(userId);
+        const userStr = String(parsedUserId);
+
+        // Fetch messages where user is the sender OR room contains user ID
         const messages = await (prisma.message as any).findMany({
             where: {
                 OR: [
-                    { senderId: userId },
-                    { roomId: { contains: `-${userStr}-` } },
-                    { roomId: { endsWith: `-${userStr}` } },
-                    { roomId: { startsWith: `chat-${userStr}-` } },
+                    { senderId: parsedUserId },
                     { roomId: { contains: userStr } },
+                    { roomId: { contains: `-${userStr}` } },
+                    { roomId: { contains: `${userStr}-` } },
                 ],
             },
             orderBy: { createdAt: 'desc' },
