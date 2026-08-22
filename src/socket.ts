@@ -45,18 +45,57 @@ export const setupSocket = (server: HttpServer) => {
             console.log(`[Socket] User ${userId} left room ${roomId}`);
         });
 
-        // Send and persist message
-        socket.on('send_message', async (data: { roomId: string; content: string }) => {
-            const { roomId, content } = data;
+        // Typing indicator
+        socket.on('typing', (data: { roomId: string; isTyping: boolean; userName?: string }) => {
+            socket.to(data.roomId).emit('user_typing', {
+                userId,
+                userName: data.userName || 'User',
+                isTyping: data.isTyping,
+            });
+        });
+
+        // Send and persist message (with reply support)
+        socket.on('send_message', async (data: { roomId: string; content: string; replyToId?: number; replyToText?: string }) => {
+            const { roomId, content, replyToId, replyToText } = data;
 
             try {
-                const message = await chatService.saveMessage(userId, roomId, content);
+                const message = await chatService.saveMessage(userId, roomId, content, replyToId, replyToText);
 
-                // Broadcast to everyone in the room
+                // Broadcast to everyone in the room (including sender for acknowledgment)
                 io.to(roomId).emit('receive_message', message);
             } catch (error) {
                 console.error(`[Socket] Error saving message from user ${userId}:`, error);
                 socket.emit('error', { message: 'Failed to send message' });
+            }
+        });
+
+        // Edit message
+        socket.on('edit_message', async (data: { roomId: string; messageId: number; content: string }) => {
+            try {
+                const updated = await chatService.editMessage(userId, data.messageId, data.content);
+                io.to(data.roomId).emit('message_edited', updated);
+            } catch (error) {
+                socket.emit('error', { message: 'Failed to edit message' });
+            }
+        });
+
+        // Delete message
+        socket.on('delete_message', async (data: { roomId: string; messageId: number }) => {
+            try {
+                const deleted = await chatService.deleteMessage(userId, data.messageId);
+                io.to(data.roomId).emit('message_deleted', deleted);
+            } catch (error) {
+                socket.emit('error', { message: 'Failed to delete message' });
+            }
+        });
+
+        // Read receipt / Seen
+        socket.on('mark_read', async (data: { roomId: string }) => {
+            try {
+                await chatService.markMessagesAsRead(userId, data.roomId);
+                socket.to(data.roomId).emit('messages_read', { roomId: data.roomId, readBy: userId });
+            } catch (error) {
+                // Ignore
             }
         });
 

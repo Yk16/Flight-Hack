@@ -9,6 +9,7 @@ import {
   TextInput,
   ScrollView,
   Animated,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -94,6 +95,7 @@ export const ServicesScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ServiceType | 'All'>('All');
+  const [notifVisible, setNotifVisible] = useState(false);
   const scrollAnim = useRef(new Animated.Value(0)).current;
 
   // Load services
@@ -176,7 +178,10 @@ export const ServicesScreen = () => {
                 <Text style={styles.addServiceBtnText}>Add Service</Text>
               </TouchableOpacity>
             ) : null}
-            <TouchableOpacity style={styles.notificationBtn}>
+            <TouchableOpacity
+              style={styles.notificationBtn}
+              onPress={() => setNotifVisible(true)}
+            >
               <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
               <View style={styles.notificationBadge} />
             </TouchableOpacity>
@@ -413,6 +418,59 @@ export const ServicesScreen = () => {
           <Ionicons name="add" size={28} color={COLORS.surface} />
         </TouchableOpacity>
       ) : null}
+
+      {/* Services Notification Modal */}
+      <Modal
+        visible={notifVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNotifVisible(false)}
+      >
+        <View style={styles.notifOverlay}>
+          <View style={styles.notifCard}>
+            <View style={styles.notifHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="notifications" size={20} color={COLORS.primary} />
+                <Text style={styles.notifTitle}>Service Alerts</Text>
+              </View>
+              <TouchableOpacity onPress={() => setNotifVisible(false)}>
+                <Ionicons name="close" size={22} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.notifItem}>
+                <View style={[styles.notifIconWrap, { backgroundColor: '#10B98120' }]}>
+                  <Ionicons name="sparkles" size={18} color="#10B981" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifItemTitle}>Special Weekend Offer</Text>
+                  <Text style={styles.notifItemBody}>Get 15% off on deep home cleaning and kitchen sanitization this weekend.</Text>
+                  <Text style={styles.notifTime}>Today</Text>
+                </View>
+              </View>
+
+              <View style={styles.notifItem}>
+                <View style={[styles.notifIconWrap, { backgroundColor: '#3B82F620' }]}>
+                  <Ionicons name="restaurant" size={18} color="#3B82F6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifItemTitle}>Cook Services Available</Text>
+                  <Text style={styles.notifItemBody}>New verified home cooks available for daily meal prep in your area.</Text>
+                  <Text style={styles.notifTime}>Yesterday</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.notifCloseBtn}
+              onPress={() => setNotifVisible(false)}
+            >
+              <Text style={styles.notifCloseText}>Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -716,5 +774,82 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+
+  // Notification Modal Styles
+  notifOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  notifCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  notifHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  notifTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  notifItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  notifIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notifItemTitle: {
+    ...TYPOGRAPHY.body2,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  notifItemBody: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  notifTime: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontSize: 10,
+    marginTop: 4,
+  },
+  notifCloseBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    marginTop: SPACING.md,
+  },
+  notifCloseText: {
+    color: COLORS.surface,
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

@@ -1,110 +1,153 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Animated,
-  Platform,
+  TouchableOpacity,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/colors';
-import { ChatMessage, MessageStatus } from '../types/chat';
 
-interface MessageBubbleProps {
-  message: ChatMessage;
-  isMyMessage: boolean;
-  showAvatar?: boolean;
-  showSenderName?: boolean;
+export interface MessageActionItem {
+  id: number;
+  senderId: number;
+  senderName?: string;
+  content: string;
+  createdAt: string;
+  isRead?: boolean;
+  replyToId?: number;
+  replyToText?: string;
+  isEdited?: boolean;
+  isDeleted?: boolean;
 }
 
-const getStatusIcon = (status: MessageStatus) => {
-  switch (status) {
-    case 'SENDING':
-      return 'time-outline';
-    case 'SENT':
-      return 'checkmark';
-    case 'DELIVERED':
-      return 'checkmark-done';
-    case 'READ':
-      return 'checkmark-done';
-    default:
-      return 'checkmark';
-  }
-};
+interface MessageBubbleProps {
+  message: MessageActionItem;
+  isMyMessage: boolean;
+  onReply?: (msg: MessageActionItem) => void;
+  onEdit?: (msg: MessageActionItem) => void;
+  onDelete?: (msg: MessageActionItem) => void;
+}
 
 export const MessageBubble = ({
   message,
   isMyMessage,
-  showAvatar = false,
-  showSenderName = false,
+  onReply,
+  onEdit,
+  onDelete,
 }: MessageBubbleProps) => {
   const { width } = useWindowDimensions();
-  const maxBubbleWidth = width * 0.75;
+  const maxBubbleWidth = Math.min(width * 0.8, 480);
+  const [showOptions, setShowOptions] = useState(false);
+
+  const formattedTime = new Date(message.createdAt).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   return (
-    <View
-      style={[
-        styles.container,
-        isMyMessage ? styles.myContainer : styles.theirContainer,
-      ]}
-    >
-      {/* Avatar - for group chats */}
-      {!isMyMessage && showAvatar && (
-        <View style={styles.avatarPlaceholder}>
-          <Ionicons name="person-circle" size={32} color={COLORS.primary} />
-        </View>
-      )}
-
-      <View style={[styles.bubbleWrapper, isMyMessage && styles.myBubbleWrapper]}>
-        {/* Sender name - for group chats */}
-        {!isMyMessage && showSenderName && (
-          <Text style={styles.senderName}>{message.senderName || 'User'}</Text>
+    <View style={[styles.container, isMyMessage ? styles.myContainer : styles.theirContainer]}>
+      <View style={[styles.bubbleWrapper, isMyMessage ? styles.myBubbleWrapper : styles.theirBubbleWrapper]}>
+        
+        {/* Reply Preview */}
+        {message.replyToText && (
+          <View style={[styles.replyPreview, isMyMessage ? styles.myReplyPreview : styles.theirReplyPreview]}>
+            <View style={styles.replyBar} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.replyPreviewLabel}>Replying to</Text>
+              <Text style={styles.replyPreviewText} numberOfLines={1}>
+                {message.replyToText}
+              </Text>
+            </View>
+          </View>
         )}
 
-        {/* Main bubble */}
-        <View
+        {/* Main Bubble */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => setShowOptions((prev) => !prev)}
           style={[
             styles.bubble,
             isMyMessage ? styles.myBubble : styles.theirBubble,
             { maxWidth: maxBubbleWidth },
+            message.isDeleted && styles.deletedBubble,
           ]}
         >
           <Text
             style={[
               styles.messageText,
               isMyMessage ? styles.myText : styles.theirText,
+              message.isDeleted && styles.deletedText,
             ]}
           >
             {message.content}
           </Text>
-        </View>
 
-        {/* Timestamp and status */}
-        <View
-          style={[
-            styles.metadata,
-            isMyMessage ? styles.myMetadata : styles.theirMetadata,
-          ]}
-        >
-          <Text style={styles.timestamp}>
-            {new Date(message.createdAt).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Text>
+          <View style={styles.footerRow}>
+            {message.isEdited && !message.isDeleted && (
+              <Text style={[styles.editedTag, isMyMessage ? styles.myEditedTag : styles.theirEditedTag]}>
+                edited
+              </Text>
+            )}
+            <Text style={[styles.timestamp, isMyMessage ? styles.myTimestamp : styles.theirTimestamp]}>
+              {formattedTime}
+            </Text>
+            {isMyMessage && !message.isDeleted && (
+              <Ionicons
+                name={message.isRead ? 'checkmark-done' : 'checkmark'}
+                size={14}
+                color={message.isRead ? '#60A5FA' : 'rgba(255,255,255,0.7)'}
+                style={styles.statusIcon}
+              />
+            )}
+          </View>
+        </TouchableOpacity>
 
-          {isMyMessage && (
-            <Ionicons
-              name={getStatusIcon(message.status)}
-              size={12}
-              color={
-                message.status === 'READ' ? COLORS.primary : COLORS.textMuted
-              }
-              style={styles.statusIcon}
-            />
-          )}
-        </View>
+        {/* Message Quick Action Row (Reply / Edit / Delete) */}
+        {showOptions && !message.isDeleted && (
+          <View style={[styles.actionRow, isMyMessage ? styles.myActionRow : styles.theirActionRow]}>
+            {onReply && (
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => {
+                  setShowOptions(false);
+                  onReply(message);
+                }}
+              >
+                <Ionicons name="arrow-undo" size={14} color={COLORS.primary} />
+                <Text style={styles.actionBtnText}>Reply</Text>
+              </TouchableOpacity>
+            )}
+
+            {isMyMessage && onEdit && (
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => {
+                  setShowOptions(false);
+                  onEdit(message);
+                }}
+              >
+                <Ionicons name="pencil" size={14} color="#10B981" />
+                <Text style={styles.actionBtnText}>Edit</Text>
+              </TouchableOpacity>
+            )}
+
+            {isMyMessage && onDelete && (
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => {
+                  setShowOptions(false);
+                  onDelete(message);
+                }}
+              >
+                <Ionicons name="trash-outline" size={14} color={COLORS.error} />
+                <Text style={[styles.actionBtnText, { color: COLORS.error }]}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -113,8 +156,8 @@ export const MessageBubble = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    marginBottom: SPACING.md,
-    alignItems: 'flex-end',
+    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.md,
   },
   myContainer: {
     justifyContent: 'flex-end',
@@ -122,27 +165,14 @@ const styles = StyleSheet.create({
   theirContainer: {
     justifyContent: 'flex-start',
   },
-  avatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: BORDER_RADIUS.round,
-    marginRight: SPACING.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
   bubbleWrapper: {
-    flex: 1,
-    alignItems: 'flex-start',
+    maxWidth: '85%',
   },
   myBubbleWrapper: {
     alignItems: 'flex-end',
   },
-  senderName: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    marginBottom: SPACING.xs,
-    marginLeft: SPACING.sm,
+  theirBubbleWrapper: {
+    alignItems: 'flex-start',
   },
   bubble: {
     paddingHorizontal: SPACING.md,
@@ -151,22 +181,29 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 3,
+    elevation: 1,
   },
   myBubble: {
     backgroundColor: COLORS.primary,
-    borderBottomRightRadius: BORDER_RADIUS.sm,
+    borderBottomRightRadius: 2,
   },
   theirBubble: {
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderBottomLeftRadius: BORDER_RADIUS.sm,
+    borderBottomLeftRadius: 2,
+  },
+  deletedBubble: {
+    backgroundColor: COLORS.background,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   messageText: {
-    ...TYPOGRAPHY.body2,
-    lineHeight: 20,
+    ...TYPOGRAPHY.body1,
+    fontSize: 15,
+    lineHeight: 21,
   },
   myText: {
     color: COLORS.surface,
@@ -174,23 +211,99 @@ const styles = StyleSheet.create({
   theirText: {
     color: COLORS.text,
   },
-  metadata: {
+  deletedText: {
+    fontStyle: 'italic',
+    color: COLORS.textMuted,
+  },
+  footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: SPACING.xs,
-    marginHorizontal: SPACING.sm,
-  },
-  myMetadata: {
     justifyContent: 'flex-end',
-  },
-  theirMetadata: {
-    justifyContent: 'flex-start',
+    marginTop: 4,
+    gap: 4,
   },
   timestamp: {
-    ...TYPOGRAPHY.caption,
+    fontSize: 10,
+  },
+  myTimestamp: {
+    color: 'rgba(255, 255, 255, 0.75)',
+  },
+  theirTimestamp: {
     color: COLORS.textMuted,
   },
   statusIcon: {
-    marginLeft: SPACING.xs,
+    marginLeft: 2,
+  },
+  editedTag: {
+    fontSize: 10,
+    fontStyle: 'italic',
+    marginRight: 2,
+  },
+  myEditedTag: {
+    color: 'rgba(255, 255, 255, 0.75)',
+  },
+  theirEditedTag: {
+    color: COLORS.textMuted,
+  },
+  replyPreview: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    borderRadius: BORDER_RADIUS.sm,
+    padding: 6,
+    marginBottom: 4,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+    width: '100%',
+  },
+  myReplyPreview: {
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  theirReplyPreview: {
+    backgroundColor: COLORS.background,
+  },
+  replyBar: {
+    width: 2,
+  },
+  replyPreviewLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  replyPreviewText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.md,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: SPACING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  myActionRow: {
+    alignSelf: 'flex-end',
+  },
+  theirActionRow: {
+    alignSelf: 'flex-start',
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 2,
+  },
+  actionBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.text,
   },
 });

@@ -11,6 +11,7 @@ import {
   Animated,
   findNodeHandle,
   UIManager,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
@@ -186,6 +187,9 @@ export const HomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [notificationVisible, setNotificationVisible] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [priceFilter, setPriceFilter] = useState<'ALL' | 'BUDGET' | 'MID' | 'PREMIUM'>('ALL');
+  const [furnishingFilter, setFurnishingFilter] = useState<'ALL' | 'FURNISHED' | 'SEMI_FURNISHED' | 'UNFURNISHED'>('ALL');
 
   const sectionRefs = useRef<Record<string, View | null>>({});
 
@@ -279,15 +283,32 @@ export const HomeScreen = () => {
   }, []);
 
   const filteredHouses = useMemo(() => {
-    if (!searchQuery.trim()) return houses;
-    const q = searchQuery.toLowerCase();
-    return houses.filter(
-      (h) =>
-        h.title?.toLowerCase().includes(q) ||
-        h.city?.toLowerCase().includes(q) ||
-        h.type?.toLowerCase().includes(q)
-    );
-  }, [houses, searchQuery]);
+    let result = houses;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (h) =>
+          h.title?.toLowerCase().includes(q) ||
+          h.city?.toLowerCase().includes(q) ||
+          h.type?.toLowerCase().includes(q)
+      );
+    }
+
+    if (priceFilter === 'BUDGET') {
+      result = result.filter((h) => h.rent < 15000);
+    } else if (priceFilter === 'MID') {
+      result = result.filter((h) => h.rent >= 15000 && h.rent <= 35000);
+    } else if (priceFilter === 'PREMIUM') {
+      result = result.filter((h) => h.rent > 35000);
+    }
+
+    if (furnishingFilter !== 'ALL') {
+      result = result.filter((h) => h.furnishing === furnishingFilter);
+    }
+
+    return result;
+  }, [houses, searchQuery, priceFilter, furnishingFilter]);
 
   const featuredHouses = useMemo(
     () =>
@@ -433,8 +454,14 @@ export const HomeScreen = () => {
                 keyboardType="default"
                 returnKeyType="search"
               />
-              <TouchableOpacity style={styles.filterBtn}>
+              <TouchableOpacity
+                style={styles.filterBtn}
+                onPress={() => setFilterModalVisible(true)}
+              >
                 <Ionicons name="options-outline" size={20} color={COLORS.surface} />
+                {(priceFilter !== 'ALL' || furnishingFilter !== 'ALL') && (
+                  <View style={styles.activeFilterDot} />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -628,6 +655,110 @@ export const HomeScreen = () => {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.filterModalOverlay}>
+          <View style={styles.filterModalCard}>
+            <View style={styles.filterModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="options" size={22} color={COLORS.primary} />
+                <Text style={styles.filterModalTitle}>Filters</Text>
+              </View>
+              <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+              {/* Budget / Price Range */}
+              <View style={styles.filterGroup}>
+                <Text style={styles.filterGroupLabel}>Monthly Rent Budget</Text>
+                <View style={styles.filterPillsRow}>
+                  {[
+                    { label: 'Any Price', val: 'ALL' },
+                    { label: 'Under ₹15K', val: 'BUDGET' },
+                    { label: '₹15K - ₹35K', val: 'MID' },
+                    { label: '₹35K+', val: 'PREMIUM' },
+                  ].map((p) => (
+                    <TouchableOpacity
+                      key={p.val}
+                      style={[
+                        styles.filterPill,
+                        priceFilter === p.val && styles.filterPillActive,
+                      ]}
+                      onPress={() => setPriceFilter(p.val as any)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterPillText,
+                          priceFilter === p.val && styles.filterPillTextActive,
+                        ]}
+                      >
+                        {p.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Furnishing Status */}
+              <View style={styles.filterGroup}>
+                <Text style={styles.filterGroupLabel}>Furnishing Status</Text>
+                <View style={styles.filterPillsRow}>
+                  {[
+                    { label: 'Any', val: 'ALL' },
+                    { label: 'Furnished', val: 'FURNISHED' },
+                    { label: 'Semi-Furnished', val: 'SEMI_FURNISHED' },
+                    { label: 'Unfurnished', val: 'UNFURNISHED' },
+                  ].map((f) => (
+                    <TouchableOpacity
+                      key={f.val}
+                      style={[
+                        styles.filterPill,
+                        furnishingFilter === f.val && styles.filterPillActive,
+                      ]}
+                      onPress={() => setFurnishingFilter(f.val as any)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterPillText,
+                          furnishingFilter === f.val && styles.filterPillTextActive,
+                        ]}
+                      >
+                        {f.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.filterModalActions}>
+              <TouchableOpacity
+                style={styles.filterResetBtn}
+                onPress={() => {
+                  setPriceFilter('ALL');
+                  setFurnishingFilter('ALL');
+                }}
+              >
+                <Text style={styles.filterResetText}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.filterApplyBtn}
+                onPress={() => setFilterModalVisible(false)}
+              >
+                <Text style={styles.filterApplyText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Notification Modal */}
       <Modal
@@ -893,7 +1024,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   notifItemTitle: {
-    ...TYPOGRAPHY.subtitle2,
+    ...TYPOGRAPHY.body2,
     color: COLORS.text,
     fontWeight: '600',
   },
@@ -915,9 +1046,113 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: SPACING.md,
   },
-  notifCloseText: {
+  activeFilterDot: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F59E0B',
+  },
+
+  // Filter Modal Styles
+  filterModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  filterModalCard: {
+    width: '100%',
+    maxWidth: 440,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  filterModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  filterModalTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  filterGroup: {
+    marginBottom: SPACING.md,
+  },
+  filterGroupLabel: {
+    ...TYPOGRAPHY.subtitle2,
+    color: COLORS.text,
+    fontWeight: '700',
+    marginBottom: SPACING.sm,
+  },
+  filterPillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+  },
+  filterPill: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.round,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filterPillActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterPillText: {
+    ...TYPOGRAPHY.body2,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  filterPillTextActive: {
     color: COLORS.surface,
+    fontWeight: '700',
+  },
+  filterModalActions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginTop: SPACING.md,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  filterResetBtn: {
+    flex: 1,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  filterResetText: {
+    color: COLORS.textMuted,
     fontWeight: '600',
-    fontSize: 14,
+  },
+  filterApplyBtn: {
+    flex: 2,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
+  filterApplyText: {
+    color: COLORS.surface,
+    fontWeight: '700',
   },
 });

@@ -16,6 +16,7 @@ import { AdminUsersScreen } from '../screens/AdminUsersScreen';
 import { AddServiceScreen } from '../screens/AddServiceScreen';
 import { AddHouseScreen } from '../screens/AddHouseScreen';
 import { HouseDetailsScreen } from '../screens/HouseDetailsScreen';
+import { ServiceDetailsScreen } from '../screens/ServiceDetailsScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -148,6 +149,16 @@ export const MainTabNavigator = () => {
         options={{
           tabBarButton: () => null,
           title: 'Property Details',
+          headerShown: false,
+          header: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="ServiceDetails"
+        component={ServiceDetailsScreen}
+        options={{
+          tabBarButton: () => null,
+          title: 'Service Details',
           headerShown: false,
           header: () => null,
         }}

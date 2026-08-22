@@ -18,8 +18,36 @@ export class ChatController {
      * GET /api/v1/chat/rooms
      */
     getMyRooms = asyncHandler(async (req: Request, res: Response) => {
-        const rooms = await chatService.getUserRooms(req.user!.userId);
+        const rooms = await chatService.getUserConversations(req.user!.userId);
         successResponse(res, rooms);
+    });
+
+    /**
+     * PUT /api/v1/chat/messages/:messageId
+     */
+    editMessage = asyncHandler(async (req: Request, res: Response) => {
+        const { messageId } = req.params;
+        const { content } = req.body;
+        const updated = await chatService.editMessage(req.user!.userId, Number(messageId), content);
+        successResponse(res, updated);
+    });
+
+    /**
+     * DELETE /api/v1/chat/messages/:messageId
+     */
+    deleteMessage = asyncHandler(async (req: Request, res: Response) => {
+        const { messageId } = req.params;
+        const deleted = await chatService.deleteMessage(req.user!.userId, Number(messageId));
+        successResponse(res, deleted);
+    });
+
+    /**
+     * POST /api/v1/chat/:roomId/read
+     */
+    markAsRead = asyncHandler(async (req: Request, res: Response) => {
+        const { roomId } = req.params;
+        const result = await chatService.markMessagesAsRead(req.user!.userId, roomId);
+        successResponse(res, result);
     });
 }
 

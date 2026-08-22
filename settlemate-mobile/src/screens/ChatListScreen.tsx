@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,72 +7,103 @@ import {
   TextInput,
   TouchableOpacity,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/authStore';
+import apiClient from '../api/client';
 import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/colors';
 import { moderateScale, verticalScale } from '../utils/responsive';
 import { CHAT_CONVERSATIONS } from '../data/chatData';
 
-const FILTERS: Array<'All' | 'Unread' | 'Pinned' | 'Support'> = ['All', 'Unread', 'Pinned', 'Support'];
+const FILTERS: Array<'All' | 'Unread' | 'Support'> = ['All', 'Unread', 'Support'];
 
 const getInitials = (name: string) =>
-  name
+  (name || 'U')
     .split(' ')
     .slice(0, 2)
     .map((part) => part[0])
     .join('')
     .toUpperCase();
 
-const getPreviewText = (text?: string) => (text ? text : 'No messages yet');
-
 export const ChatListScreen = () => {
   const { user } = useAuthStore();
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
+
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Unread' | 'Pinned' | 'Support'>('All');
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Unread' | 'Support'>('All');
+
+  const loadConversations = async () => {
+    try {
+      const res = await apiClient.get('/chat/rooms');
+      const liveRooms = res.data?.data || res.data || [];
+
+      if (liveRooms.length > 0) {
+        setConversations(liveRooms);
+      } else {
+        // Fallback to sample conversations if no live chats yet
+        setConversations(CHAT_CONVERSATIONS);
+      }
+    } catch (err) {
+      console.warn('Failed to load conversations:', err);
+      setConversations(CHAT_CONVERSATIONS);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isFocused) {
+      loadConversations();
+    }
+  }, [isFocused]);
 
   const filteredConversations = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return CHAT_CONVERSATIONS.filter((conversation) => {
+    return conversations.filter((conversation) => {
+      const name = conversation.participantName || 'User';
+      const lastText = conversation.lastMessage?.content || '';
+
       const matchesQuery =
         !query ||
-        conversation.participantName.toLowerCase().includes(query) ||
-        conversation.lastMessage?.content.toLowerCase().includes(query);
+        name.toLowerCase().includes(query) ||
+        lastText.toLowerCase().includes(query);
 
       const matchesFilter =
         activeFilter === 'All' ||
-        (activeFilter === 'Unread' && conversation.unreadCount > 0) ||
-        (activeFilter === 'Pinned' && conversation.isPinned) ||
+        (activeFilter === 'Unread' && (conversation.unreadCount || 0) > 0) ||
         (activeFilter === 'Support' && conversation.type === 'SUPPORT');
 
       return matchesQuery && matchesFilter;
     });
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, searchQuery, conversations]);
 
-  const unreadCount = CHAT_CONVERSATIONS.reduce((total, conversation) => total + conversation.unreadCount, 0);
-  const pinnedCount = CHAT_CONVERSATIONS.filter((conversation) => conversation.isPinned).length;
-  const supportCount = CHAT_CONVERSATIONS.filter((conversation) => conversation.type === 'SUPPORT').length;
-
-  const openConversation = (roomId: string) => {
-    navigation.navigate('ChatThread', { roomId });
+  const openConversation = (conv: any) => {
+    navigation.navigate('ChatThread', {
+      roomId: conv.roomId,
+      recipientName: conv.participantName,
+      participantId: conv.participantId,
+    });
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <FlatList
         data={filteredConversations}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => item.roomId || `conv-${index}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>
             <View style={styles.headerRow}>
               <Text style={styles.headerTitle}>Messages</Text>
-              <Text style={styles.headerUser}>{user?.name || user?.firstName || 'You'}</Text>
+              <Text style={styles.headerUser}>{user?.name || 'You'}</Text>
             </View>
 
             <View style={styles.searchBar}>
@@ -115,59 +146,67 @@ export const ChatListScreen = () => {
             />
 
             <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>Recent conversations</Text>
-              <Text style={styles.sectionMeta}>{filteredConversations.length} visible</Text>
+              <Text style={styles.sectionTitle}>Conversations</Text>
+              <Text style={styles.sectionMeta}>{filteredConversations.length} active</Text>
             </View>
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="chatbubble-ellipses-outline" size={32} color={COLORS.textMuted} />
-            <Text style={styles.emptyTitle}>No chats found</Text>
-            <Text style={styles.emptyText}>
-              Try another search term or switch to a different filter.
-            </Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => openConversation(item.roomId)}
-            style={({ pressed }) => [styles.conversationRow, pressed && styles.conversationRowPressed]}
-          >
-            <View style={styles.avatarWrap}>
-              <View style={[styles.avatar, item.type === 'SUPPORT' && styles.supportAvatar]}>
-                <Text style={styles.avatarText}>{getInitials(item.participantName)}</Text>
-              </View>
-              {item.isOnline ? <View style={styles.onlineDot} /> : null}
+          loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
             </View>
-
-            <View style={styles.conversationBody}>
-              <View style={styles.conversationTopRow}>
-                <Text style={styles.conversationName} numberOfLines={1}>
-                  {item.participantName}
-                </Text>
-                <Text style={styles.timeText}>{item.lastMessageAt}</Text>
-              </View>
-
-              <View style={styles.conversationMetaRow}>
-                <View style={styles.rolePill}>
-                  <Text style={styles.rolePillText}>{item.type === 'SUPPORT' ? 'Support' : 'Direct'}</Text>
-                </View>
-                {item.isPinned ? <Ionicons name="pin" size={14} color={COLORS.primary} /> : null}
-                {item.unreadCount > 0 ? (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
-                  </View>
-                ) : null}
-              </View>
-
-              <Text style={styles.messagePreview} numberOfLines={1}>
-                {getPreviewText(item.lastMessage?.content)}
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="chatbubble-ellipses-outline" size={32} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>No chats found</Text>
+              <Text style={styles.emptyText}>
+                Send a message to a property owner or flatmate to start chatting.
               </Text>
             </View>
-          </Pressable>
-        )}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+          )
+        }
+        renderItem={({ item }) => {
+          const name = item.participantName || 'User';
+          const lastMsg = item.lastMessage?.content || item.lastMessageText || 'Tap to chat';
+          const time = item.updatedAt
+            ? new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : 'Recently';
+
+          return (
+            <Pressable
+              onPress={() => openConversation(item)}
+              style={({ pressed }) => [styles.conversationRow, pressed && styles.conversationRowPressed]}
+            >
+              <View style={styles.avatarWrap}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{getInitials(name)}</Text>
+                </View>
+                <View style={styles.onlineDot} />
+              </View>
+
+              <View style={styles.conversationBody}>
+                <View style={styles.conversationTopRow}>
+                  <Text style={styles.conversationName} numberOfLines={1}>
+                    {name}
+                  </Text>
+                  <Text style={styles.timeText}>{time}</Text>
+                </View>
+
+                <View style={styles.conversationBottomRow}>
+                  <Text style={styles.previewText} numberOfLines={1}>
+                    {lastMsg}
+                  </Text>
+                  {item.unreadCount > 0 && (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </Pressable>
+          );
+        }}
       />
     </SafeAreaView>
   );
@@ -180,7 +219,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
+    paddingTop: SPACING.md,
     paddingBottom: SPACING.xxl,
   },
   headerRow: {
@@ -190,38 +229,43 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   headerTitle: {
-    ...TYPOGRAPHY.h1,
+    ...TYPOGRAPHY.h2,
     color: COLORS.text,
   },
   headerUser: {
-    ...TYPOGRAPHY.body2,
+    ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
-    fontWeight: '600',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.round,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: verticalScale(50),
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
+    borderRadius: BORDER_RADIUS.round,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
     marginBottom: SPACING.md,
+    gap: SPACING.sm,
   },
   searchInput: {
     flex: 1,
-    ...TYPOGRAPHY.body2,
+    fontSize: 14,
     color: COLORS.text,
-    marginLeft: SPACING.sm,
   },
   filtersRow: {
-    gap: SPACING.sm,
-    paddingBottom: SPACING.md,
+    gap: SPACING.xs,
+    marginBottom: SPACING.md,
   },
   filterChip: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingVertical: 6,
     borderRadius: BORDER_RADIUS.round,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -232,161 +276,36 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   filterChipText: {
-    ...TYPOGRAPHY.body2,
+    ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     fontWeight: '600',
   },
   filterChipTextActive: {
     color: COLORS.surface,
   },
-  statsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-  statCard: {
-    minWidth: '22%',
-    flexGrow: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  statValue: {
-    ...TYPOGRAPHY.h3,
-    color: COLORS.text,
-    marginTop: SPACING.xs,
-  },
-  statLabel: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
   sectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   sectionTitle: {
-    ...TYPOGRAPHY.h3,
+    ...TYPOGRAPHY.subtitle2,
     color: COLORS.text,
+    fontWeight: '700',
   },
   sectionMeta: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
-    fontWeight: '600',
   },
-  conversationRow: {
-    flexDirection: 'row',
+  center: {
+    padding: SPACING.xl,
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.md,
-  },
-  conversationRowPressed: {
-    opacity: 0.96,
-  },
-  separator: {
-    height: SPACING.sm,
-  },
-  avatarWrap: {
-    marginRight: SPACING.md,
-    alignItems: 'center',
-  },
-  avatar: {
-    width: moderateScale(50),
-    height: moderateScale(50),
-    borderRadius: BORDER_RADIUS.round,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  supportAvatar: {
-    backgroundColor: COLORS.secondary,
-  },
-  avatarText: {
-    color: COLORS.surface,
-    fontWeight: '700',
-    fontSize: moderateScale(15),
-  },
-  onlineDot: {
-    width: moderateScale(10),
-    height: moderateScale(10),
-    borderRadius: BORDER_RADIUS.round,
-    borderWidth: 2,
-    borderColor: COLORS.surface,
-    backgroundColor: COLORS.success,
-    marginTop: -SPACING.xs,
-  },
-  conversationBody: {
-    flex: 1,
-    minWidth: 0,
-  },
-  conversationTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  conversationName: {
-    ...TYPOGRAPHY.h4,
-    color: COLORS.text,
-    flex: 1,
-    paddingRight: SPACING.sm,
-  },
-  timeText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    fontWeight: '600',
-  },
-  conversationMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: SPACING.xs,
-    marginTop: SPACING.xs,
-  },
-  rolePill: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.round,
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  rolePillText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textMuted,
-    fontWeight: '600',
-  },
-  unreadBadge: {
-    minWidth: moderateScale(22),
-    height: moderateScale(22),
-    paddingHorizontal: SPACING.xs,
-    borderRadius: BORDER_RADIUS.round,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unreadBadgeText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.surface,
-    fontWeight: '700',
-  },
-  messagePreview: {
-    ...TYPOGRAPHY.body2,
-    color: COLORS.textMuted,
-    marginTop: SPACING.xs,
-    lineHeight: moderateScale(18),
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: SPACING.xl,
+    padding: SPACING.xl,
+    marginTop: SPACING.xl,
   },
   emptyTitle: {
     ...TYPOGRAPHY.h4,
@@ -397,7 +316,94 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body2,
     color: COLORS.textMuted,
     textAlign: 'center',
-    marginTop: SPACING.xs,
-    maxWidth: '80%',
+    marginTop: 4,
+  },
+  conversationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: SPACING.md,
+  },
+  conversationRowPressed: {
+    backgroundColor: COLORS.background,
+  },
+  avatarWrap: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: `${COLORS.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    ...TYPOGRAPHY.body1,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+  },
+  conversationBody: {
+    flex: 1,
+  },
+  conversationTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  conversationName: {
+    ...TYPOGRAPHY.subtitle2,
+    color: COLORS.text,
+    fontWeight: '700',
+    flex: 1,
+  },
+  timeText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontSize: 11,
+  },
+  conversationBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  previewText: {
+    ...TYPOGRAPHY.body2,
+    color: COLORS.textMuted,
+    fontSize: 13,
+    flex: 1,
+  },
+  unreadBadge: {
+    backgroundColor: COLORS.primary,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    marginLeft: 6,
+  },
+  unreadBadgeText: {
+    color: COLORS.surface,
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
