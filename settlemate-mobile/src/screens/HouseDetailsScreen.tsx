@@ -110,31 +110,36 @@ export const HouseDetailsScreen = () => {
 
   const handleBooking = async () => {
     if (!house) return;
-    if (!bookingMessage.trim() && !checkInDate.trim()) {
-      Alert.alert('Information', 'Please add a message or check-in date for your booking request');
-      return;
-    }
     setBookingLoading(true);
     try {
       const bookingData: any = { houseId: Number(house.id) };
       if (bookingMessage.trim()) bookingData.message = bookingMessage.trim();
       if (checkInDate.trim()) {
         const date = new Date(checkInDate);
-        if (isNaN(date.getTime())) {
-          Alert.alert('Invalid Date', 'Please enter a valid date');
-          setBookingLoading(false);
-          return;
+        if (!isNaN(date.getTime())) {
+          bookingData.checkInDate = date.toISOString();
         }
-        bookingData.checkInDate = date.toISOString();
       }
       await createBooking(bookingData);
-      Alert.alert('Success', 'Your booking request has been sent to the owner!');
+      
+      const successMsg = 'Your booking request has been sent to the owner!';
+      if (Platform.OS === 'web') {
+        window.alert(successMsg);
+      } else {
+        Alert.alert('Request Sent', successMsg);
+      }
+
       setBookingModalVisible(false);
       setBookingMessage('');
       setCheckInDate('');
     } catch (error: any) {
       console.error('[HouseDetailsScreen] Booking error:', error);
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to create booking request');
+      const errMsg = error?.response?.data?.message || error?.message || 'Failed to create booking request';
+      if (Platform.OS === 'web') {
+        window.alert(`Error: ${errMsg}`);
+      } else {
+        Alert.alert('Error', errMsg);
+      }
     } finally {
       setBookingLoading(false);
     }
@@ -196,7 +201,30 @@ export const HouseDetailsScreen = () => {
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{house.title || 'Property Details'}</Text>
-        <TouchableOpacity style={styles.backButton} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backButton}
+          activeOpacity={0.7}
+          onPress={async () => {
+            const shareTitle = house.title || 'Check out this property on SettleMate';
+            const shareUrl = typeof window !== 'undefined' ? window.location.href : `http://localhost:8081`;
+            if (typeof navigator !== 'undefined' && (navigator as any).share) {
+              try {
+                await (navigator as any).share({
+                  title: shareTitle,
+                  text: `${shareTitle} - ${formatInr(house.rent)}/mo`,
+                  url: shareUrl,
+                });
+              } catch (e) {
+                // Share dismissed
+              }
+            } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+              await navigator.clipboard.writeText(shareUrl);
+              window.alert('Property link copied to clipboard!');
+            } else {
+              Alert.alert('Shared', 'Property link copied!');
+            }
+          }}
+        >
           <Ionicons name="share-outline" size={22} color={COLORS.text} />
         </TouchableOpacity>
       </View>

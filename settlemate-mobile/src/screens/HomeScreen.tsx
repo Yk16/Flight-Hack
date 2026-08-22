@@ -185,6 +185,7 @@ export const HomeScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [notificationVisible, setNotificationVisible] = useState(false);
 
   const sectionRefs = useRef<Record<string, View | null>>({});
 
@@ -343,22 +344,35 @@ export const HomeScreen = () => {
     (item: FlatmateProfile) => (
       <FlatmateCard
         profile={item}
-        onPress={() => {}}
-        onChat={() => {}}
+        onPress={() => navigation.navigate('FlatmateProfile')}
+        onChat={() => {
+          if (item.user?.id) {
+            navigation.navigate('Chat', {
+              screen: 'ChatDetail',
+              params: {
+                roomId: `chat-${Math.min(Number(user?.id || 1), item.user.id)}-${Math.max(Number(user?.id || 1), item.user.id)}`,
+                recipientName: item.user.name || 'Flatmate',
+                recipientId: item.user.id,
+              },
+            });
+          } else {
+            navigation.navigate('Chat');
+          }
+        }}
       />
     ),
-    []
+    [navigation, user]
   );
 
   const renderServiceCard = useCallback(
     (item: Service) => (
       <ServiceCardCompact
         service={item}
-        onPress={() => {}}
-        onBook={() => {}}
+        onPress={() => navigation.navigate('Services')}
+        onBook={() => navigation.navigate('Services')}
       />
     ),
-    []
+    [navigation]
   );
 
   if (loading) {
@@ -394,7 +408,10 @@ export const HomeScreen = () => {
                 <Ionicons name="chevron-down" size={16} color={COLORS.text} style={styles.chevron} />
               </View>
             </View>
-            <TouchableOpacity style={styles.notificationBtn}>
+            <TouchableOpacity
+              style={styles.notificationBtn}
+              onPress={() => setNotificationVisible(true)}
+            >
               <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
               <View style={styles.notificationBadge} />
             </TouchableOpacity>
@@ -459,144 +476,222 @@ export const HomeScreen = () => {
         </View>
 
         {/* Sections */}
-        <AnimatedSection index={0}>
-          <View ref={(r) => { sectionRefs.current['featured'] = r; }}>
-            <HorizontalSection
-              title="Featured Properties"
-              subtitle="Handpicked homes recommended for you"
-              data={featuredHouses}
-              renderItem={renderPropertyCard}
-              keyExtractor={(item) => `featured-${item.id}`}
-              onSeeAll={() => handleSeeAll('featured')}
-              emptyMessage="No featured properties available."
-            />
-          </View>
-        </AnimatedSection>
+        {(activeCategory === 'All' || activeCategory === 'Houses') && (
+          <AnimatedSection index={0}>
+            <View ref={(r) => { sectionRefs.current['independent-houses'] = r; }}>
+              <HorizontalSection
+                title="Independent Houses"
+                subtitle="Spacious homes for families and professionals"
+                data={independentHouses}
+                renderItem={renderPropertyCard}
+                keyExtractor={(item) => `house-${item.id}`}
+                onSeeAll={() => handleSeeAll('houses')}
+                emptyMessage="No independent houses found."
+              />
+            </View>
+          </AnimatedSection>
+        )}
 
-        <AnimatedSection index={1}>
-          <View ref={(r) => { sectionRefs.current['independent-houses'] = r; }}>
-            <HorizontalSection
-              title="Independent Houses"
-              subtitle="Spacious homes for families and professionals"
-              data={independentHouses}
-              renderItem={renderPropertyCard}
-              keyExtractor={(item) => `house-${item.id}`}
-              onSeeAll={() => handleSeeAll('houses')}
-              emptyMessage="No independent houses found."
-            />
-          </View>
-        </AnimatedSection>
+        {(activeCategory === 'All' || activeCategory === 'Apartments') && (
+          <AnimatedSection index={1}>
+            <View ref={(r) => { sectionRefs.current['apartments'] = r; }}>
+              <HorizontalSection
+                title="Apartments"
+                subtitle="Modern apartments in prime locations"
+                data={apartments}
+                renderItem={renderPropertyCard}
+                keyExtractor={(item) => `apt-${item.id}`}
+                onSeeAll={() => handleSeeAll('apartments')}
+                emptyMessage="No apartments available."
+              />
+            </View>
+          </AnimatedSection>
+        )}
 
-        <AnimatedSection index={2}>
-          <View ref={(r) => { sectionRefs.current['apartments'] = r; }}>
-            <HorizontalSection
-              title="Apartments"
-              subtitle="Modern apartments in prime locations"
-              data={apartments}
-              renderItem={renderPropertyCard}
-              keyExtractor={(item) => `apt-${item.id}`}
-              onSeeAll={() => handleSeeAll('apartments')}
-              emptyMessage="No apartments available."
-            />
-          </View>
-        </AnimatedSection>
+        {(activeCategory === 'All' || activeCategory === 'Rooms') && (
+          <AnimatedSection index={2}>
+            <View ref={(r) => { sectionRefs.current['private-rooms'] = r; }}>
+              <HorizontalSection
+                title="Private Rooms"
+                subtitle="Affordable rooms for students and professionals"
+                data={rooms}
+                renderItem={renderPropertyCard}
+                keyExtractor={(item) => `room-${item.id}`}
+                onSeeAll={() => handleSeeAll('rooms')}
+                emptyMessage="No rooms available."
+              />
+            </View>
+          </AnimatedSection>
+        )}
 
-        <AnimatedSection index={3}>
-          <View ref={(r) => { sectionRefs.current['private-rooms'] = r; }}>
-            <HorizontalSection
-              title="Private Rooms"
-              subtitle="Affordable rooms for students and professionals"
-              data={rooms}
-              renderItem={renderPropertyCard}
-              keyExtractor={(item) => `room-${item.id}`}
-              onSeeAll={() => handleSeeAll('rooms')}
-              emptyMessage="No rooms available."
-            />
-          </View>
-        </AnimatedSection>
+        {(activeCategory === 'All' || activeCategory === 'Flatmates') && (
+          <AnimatedSection index={3}>
+            <View ref={(r) => { sectionRefs.current['flatmates'] = r; }}>
+              <HorizontalSection
+                title="Find Your Flatmate"
+                subtitle="People looking to share a home near you"
+                data={flatmates}
+                renderItem={renderFlatmateCard}
+                keyExtractor={(item) => `flatmate-${item.id}`}
+                onSeeAll={() => handleSeeAll('flatmates')}
+                emptyMessage="No flatmates available right now."
+              />
+            </View>
+          </AnimatedSection>
+        )}
 
-        <AnimatedSection index={4}>
-          <View ref={(r) => { sectionRefs.current['flatmates'] = r; }}>
-            <HorizontalSection
-              title="Find Your Flatmate"
-              subtitle="People looking to share a home near you"
-              data={flatmates}
-              renderItem={renderFlatmateCard}
-              keyExtractor={(item) => `flatmate-${item.id}`}
-              onSeeAll={() => handleSeeAll('flatmates')}
-              emptyMessage="No flatmates available right now."
-            />
-          </View>
-        </AnimatedSection>
+        {(activeCategory === 'All' || activeCategory === 'Services') && (
+          <AnimatedSection index={4}>
+            <View ref={(r) => { sectionRefs.current['services'] = r; }}>
+              <HorizontalSection
+                title="Settlement Services"
+                subtitle="Everything you need after moving in"
+                data={services}
+                renderItem={renderServiceCard}
+                keyExtractor={(item) => `service-${item.id}`}
+                onSeeAll={() => handleSeeAll('services')}
+                emptyMessage="No services available."
+              />
+            </View>
+          </AnimatedSection>
+        )}
 
-        <AnimatedSection index={5}>
-          <View ref={(r) => { sectionRefs.current['services'] = r; }}>
-            <HorizontalSection
-              title="Settlement Services"
-              subtitle="Everything you need after moving in"
-              data={services}
-              renderItem={renderServiceCard}
-              keyExtractor={(item) => `service-${item.id}`}
-              onSeeAll={() => handleSeeAll('services')}
-              emptyMessage="No services available."
-            />
-          </View>
-        </AnimatedSection>
+        {activeCategory === 'All' && (
+          <>
+            <AnimatedSection index={5}>
+              <View ref={(r) => { sectionRefs.current['featured'] = r; }}>
+                <HorizontalSection
+                  title="Featured Properties"
+                  subtitle="Handpicked homes recommended for you"
+                  data={featuredHouses}
+                  renderItem={renderPropertyCard}
+                  keyExtractor={(item) => `featured-${item.id}`}
+                  onSeeAll={() => handleSeeAll('featured')}
+                  emptyMessage="No featured properties available."
+                />
+              </View>
+            </AnimatedSection>
 
-        <AnimatedSection index={6}>
-          <View ref={(r) => { sectionRefs.current['newly-added'] = r; }}>
-            <HorizontalSection
-              title="Newly Added"
-              subtitle="Fresh listings added recently"
-              data={newlyAdded}
-              renderItem={renderPropertyCard}
-              keyExtractor={(item) => `new-${item.id}`}
-              emptyMessage="No new listings yet."
-            />
-          </View>
-        </AnimatedSection>
+            <AnimatedSection index={6}>
+              <View ref={(r) => { sectionRefs.current['newly-added'] = r; }}>
+                <HorizontalSection
+                  title="Newly Added"
+                  subtitle="Fresh listings added recently"
+                  data={newlyAdded}
+                  renderItem={renderPropertyCard}
+                  keyExtractor={(item) => `new-${item.id}`}
+                  emptyMessage="No new listings yet."
+                />
+              </View>
+            </AnimatedSection>
 
-        <AnimatedSection index={7}>
-          <View ref={(r) => { sectionRefs.current['budget'] = r; }}>
-            <HorizontalSection
-              title="Budget Friendly"
-              subtitle="Great homes within your budget"
-              data={budgetFriendly}
-              renderItem={renderPropertyCard}
-              keyExtractor={(item) => `budget-${item.id}`}
-              emptyMessage="No budget-friendly listings found."
-            />
-          </View>
-        </AnimatedSection>
+            <AnimatedSection index={7}>
+              <View ref={(r) => { sectionRefs.current['budget'] = r; }}>
+                <HorizontalSection
+                  title="Budget Friendly"
+                  subtitle="Great homes within your budget"
+                  data={budgetFriendly}
+                  renderItem={renderPropertyCard}
+                  keyExtractor={(item) => `budget-${item.id}`}
+                  emptyMessage="No budget-friendly listings found."
+                />
+              </View>
+            </AnimatedSection>
 
-        <AnimatedSection index={8}>
-          <View ref={(r) => { sectionRefs.current['premium'] = r; }}>
-            <HorizontalSection
-              title="Premium Collection"
-              subtitle="Luxury homes with premium amenities"
-              data={premiumCollection}
-              renderItem={renderPropertyCard}
-              keyExtractor={(item) => `premium-${item.id}`}
-              emptyMessage="No premium listings available."
-            />
-          </View>
-        </AnimatedSection>
+            <AnimatedSection index={8}>
+              <View ref={(r) => { sectionRefs.current['premium'] = r; }}>
+                <HorizontalSection
+                  title="Premium Collection"
+                  subtitle="Luxury homes with premium amenities"
+                  data={premiumCollection}
+                  renderItem={renderPropertyCard}
+                  keyExtractor={(item) => `premium-${item.id}`}
+                  emptyMessage="No premium listings available."
+                />
+              </View>
+            </AnimatedSection>
 
-        <AnimatedSection index={9}>
-          <View ref={(r) => { sectionRefs.current['near-you'] = r; }}>
-            <HorizontalSection
-              title="Near You"
-              subtitle="Properties close to your selected location"
-              data={filteredHouses.slice(0, 10)}
-              renderItem={renderPropertyCard}
-              keyExtractor={(item) => `near-${item.id}`}
-              emptyMessage="No properties near your location."
-            />
-          </View>
-        </AnimatedSection>
+            <AnimatedSection index={9}>
+              <View ref={(r) => { sectionRefs.current['near-you'] = r; }}>
+                <HorizontalSection
+                  title="Near You"
+                  subtitle="Properties close to your selected location"
+                  data={filteredHouses.slice(0, 10)}
+                  renderItem={renderPropertyCard}
+                  keyExtractor={(item) => `near-${item.id}`}
+                  emptyMessage="No properties near your location."
+                />
+              </View>
+            </AnimatedSection>
+          </>
+        )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Notification Modal */}
+      <Modal
+        visible={notificationVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNotificationVisible(false)}
+      >
+        <View style={styles.notifOverlay}>
+          <View style={styles.notifCard}>
+            <View style={styles.notifHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="notifications" size={20} color={COLORS.primary} />
+                <Text style={styles.notifTitle}>Notifications</Text>
+              </View>
+              <TouchableOpacity onPress={() => setNotificationVisible(false)}>
+                <Ionicons name="close" size={22} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.notifItem}>
+                <View style={[styles.notifIconWrap, { backgroundColor: '#10B98120' }]}>
+                  <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifItemTitle}>Welcome to SettleMate!</Text>
+                  <Text style={styles.notifItemBody}>Explore verified homes, rooms, and settlement services in your city.</Text>
+                  <Text style={styles.notifTime}>Just now</Text>
+                </View>
+              </View>
+
+              <View style={styles.notifItem}>
+                <View style={[styles.notifIconWrap, { backgroundColor: '#3B82F620' }]}>
+                  <Ionicons name="home" size={20} color="#3B82F6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifItemTitle}>New Listings Available</Text>
+                  <Text style={styles.notifItemBody}>Fresh verified apartments added in Ahmedabad & Bangalore.</Text>
+                  <Text style={styles.notifTime}>2 hours ago</Text>
+                </View>
+              </View>
+
+              <View style={styles.notifItem}>
+                <View style={[styles.notifIconWrap, { backgroundColor: '#8B5CF620' }]}>
+                  <Ionicons name="shield-checkmark" size={20} color="#8B5CF6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifItemTitle}>KYC Verification</Text>
+                  <Text style={styles.notifItemBody}>Verify your Aadhaar or PAN in Profile to boost your Trust Score.</Text>
+                  <Text style={styles.notifTime}>1 day ago</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.notifCloseBtn}
+              onPress={() => setNotificationVisible(false)}
+            >
+              <Text style={styles.notifCloseText}>Mark all as read</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -747,5 +842,82 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: SPACING.xl,
+  },
+
+  // Notification Modal Styles
+  notifOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  notifCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  notifHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  notifTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+  },
+  notifItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  notifIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notifItemTitle: {
+    ...TYPOGRAPHY.subtitle2,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  notifItemBody: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  notifTime: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
+    fontSize: 10,
+    marginTop: 4,
+  },
+  notifCloseBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    marginTop: SPACING.md,
+  },
+  notifCloseText: {
+    color: COLORS.surface,
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

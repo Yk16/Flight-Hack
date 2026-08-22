@@ -5,9 +5,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  useWindowDimensions,
   Alert,
   Image,
+  Platform,
+  Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +25,7 @@ export const ProfileScreen = () => {
   const { user, logout } = useAuthStore();
   const { width } = useWindowDimensions();
   const isFocused = useIsFocused();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Get user role
   const getUserRole = () => {
@@ -112,14 +115,7 @@ export const ProfileScreen = () => {
       icon: 'log-out',
       color: COLORS.error,
       onPress: () => {
-        Alert.alert('Logout', 'Are you sure you want to logout?', [
-          { text: 'Cancel', onPress: () => {} },
-          {
-            text: 'Logout',
-            onPress: () => logout(),
-            style: 'destructive',
-          },
-        ]);
+        setShowLogoutModal(true);
       },
     },
   ];
@@ -190,10 +186,10 @@ export const ProfileScreen = () => {
                       userRole === 'Admin'
                         ? COLORS.primary
                         : userRole === 'Owner'
-                        ? '#10B981'
-                        : userRole === 'Provider'
-                        ? '#F59E0B'
-                        : '#6B7280',
+                          ? '#10B981'
+                          : userRole === 'Provider'
+                            ? '#F59E0B'
+                            : '#6B7280',
                   },
                 ]}
               >
@@ -222,7 +218,7 @@ export const ProfileScreen = () => {
                 onPress={action.onPress}
                 activeOpacity={0.75}
               >
-                <View style={[styles.actionIconContainer, { backgroundColor: `${action.color}15` }]}> 
+                <View style={[styles.actionIconContainer, { backgroundColor: `${action.color}15` }]}>
                   <Ionicons name={action.icon as any} size={actionIconSize * 0.8} color={action.color} />
                 </View>
                 <Text style={[styles.actionLabel, { fontSize: actionLabelSize }]} numberOfLines={1}>
@@ -234,6 +230,50 @@ export const ProfileScreen = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Custom Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.logoutModalCard}>
+            <View style={styles.logoutIconWrap}>
+              <Ionicons name="log-out" size={28} color={COLORS.error} />
+            </View>
+            <Text style={styles.logoutModalTitle}>Sign Out</Text>
+            <Text style={styles.logoutModalDesc}>
+              Are you sure you want to sign out of your SettleMate account?
+            </Text>
+
+            <View style={styles.logoutModalActions}>
+              <TouchableOpacity
+                style={styles.logoutCancelBtn}
+                onPress={() => setShowLogoutModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.logoutCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.logoutConfirmBtn}
+                onPress={async () => {
+                  setShowLogoutModal(false);
+                  try {
+                    await logout();
+                  } catch (e) {
+                    console.error('Logout error:', e);
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.logoutConfirmText}>Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -427,5 +467,87 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.h3,
     color: COLORS.textMuted,
     marginLeft: SPACING.sm,
+  },
+
+  // Custom Logout Confirmation Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+  },
+  logoutModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  logoutIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  logoutModalTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+    fontWeight: '700',
+    marginBottom: SPACING.xs,
+  },
+  logoutModalDesc: {
+    ...TYPOGRAPHY.body2,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: SPACING.xl,
+    lineHeight: 20,
+  },
+  logoutModalActions: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: SPACING.md,
+  },
+  logoutCancelBtn: {
+    flex: 1,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutCancelText: {
+    ...TYPOGRAPHY.body1,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  logoutConfirmBtn: {
+    flex: 1,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.error,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoutConfirmText: {
+    ...TYPOGRAPHY.body1,
+    color: COLORS.surface,
+    fontWeight: '700',
   },
 });
