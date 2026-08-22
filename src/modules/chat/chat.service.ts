@@ -173,7 +173,7 @@ export class ChatService {
                 // Determine other participant ID from roomId convention or sender
                 let otherUserId: number | null = null;
                 const parts = msg.roomId.split('-');
-                const ids = parts.map(p => Number(p)).filter(n => !isNaN(n) && n > 0);
+                const ids = parts.map((p: string) => Number(p)).filter((n: number) => !isNaN(n) && n > 0);
                 if (ids.length >= 2) {
                     otherUserId = ids[0] === userId ? ids[1] : ids[0];
                 } else if (msg.senderId !== userId) {
