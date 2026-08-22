@@ -201,10 +201,10 @@ export const ChatListScreen = () => {
                             <Text style={styles.quickAvatarText}>{getInitials(name)}</Text>
                           </View>
                         )}
-                        <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={styles.quickInfo}>
+                          <View style={styles.quickTopRow}>
                             <Text style={styles.quickName} numberOfLines={1}>{name}</Text>
-                            <Text style={styles.quickBudgetText}>{budget}</Text>
+                            <Text style={styles.quickBudgetText} numberOfLines={1}>{budget}</Text>
                           </View>
                           <Text style={styles.quickRole} numberOfLines={1}>
                             {person.occupation || 'Professional'} • {location.split('/')[0].trim()}
@@ -642,17 +642,28 @@ const styles = StyleSheet.create({
     backgroundColor: `${COLORS.primary}18`,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   quickAvatarText: {
     ...TYPOGRAPHY.body2,
     fontWeight: '700',
     color: COLORS.primary,
   },
+  quickInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  quickTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
   quickName: {
     ...TYPOGRAPHY.body2,
     fontWeight: '700',
     color: COLORS.text,
     fontSize: 14,
+    flexShrink: 1,
   },
   quickRole: {
     fontSize: 11,
@@ -665,16 +676,19 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1.5,
     borderColor: COLORS.primary,
+    flexShrink: 0,
   },
   quickBudgetText: {
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.primary,
+    flexShrink: 0,
   },
   quickActionGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 0,
   },
   quickProfileBtn: {
     paddingVertical: 6,

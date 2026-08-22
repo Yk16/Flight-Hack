@@ -8,10 +8,11 @@ import {
   TextInput,
   Image,
   ActivityIndicator,
-  SafeAreaView,
   useWindowDimensions,
+  BackHandler,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/authStore';
 import apiClient from '../api/client';
@@ -21,11 +22,27 @@ export const FlatmateBrowseScreen = () => {
   const navigation = useNavigation<any>();
   const { user: currentUser } = useAuthStore();
   const { width } = useWindowDimensions();
+  const isFocused = useIsFocused();
 
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGender, setSelectedGender] = useState<'ALL' | 'MALE' | 'FEMALE'>('ALL');
+
+  // Always return to the main chat screen (header button or Android gesture)
+  const handleGoBack = () => {
+    navigation.navigate('Chat', { screen: 'ChatInbox' });
+  };
+
+  useEffect(() => {
+    if (!isFocused) return;
+    const onBackPress = () => {
+      handleGoBack();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [isFocused, navigation]);
 
   useEffect(() => {
     loadFlatmates();
@@ -92,17 +109,19 @@ export const FlatmateBrowseScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Find Flatmates</Text>
-          <Text style={styles.headerSub}>{filtered.length} active seekers nearby</Text>
+      <View style={styles.headerRow}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={handleGoBack}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>Find Flatmates</Text>
+        </View>
+        <View style={styles.headerPill}>
+          <Text style={styles.headerPillText}>{filtered.length} active</Text>
         </View>
       </View>
 
@@ -225,26 +244,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: SPACING.sm,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    flexShrink: 1,
   },
   backBtn: {
-    padding: 6,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.background,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     ...TYPOGRAPHY.h2,
     color: COLORS.text,
+    flexShrink: 1,
   },
-  headerSub: {
+  headerPill: {
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.round,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  headerPillText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
   },

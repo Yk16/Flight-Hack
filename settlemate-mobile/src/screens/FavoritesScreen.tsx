@@ -5,10 +5,10 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
-  useWindowDimensions,
+  BackHandler,
 } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavoritesStore } from '../store/favoritesStore';
 import { PropertyCardHorizontal } from '../components/PropertyCardHorizontal';
@@ -18,7 +18,11 @@ export const FavoritesScreen = () => {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const { favorites, loadFavorites } = useFavoritesStore();
-  const { width } = useWindowDimensions();
+
+  // Always return to the profile screen (header button or Android gesture)
+  const handleGoBack = () => {
+    navigation.navigate('Profile', { screen: 'ProfileHome' });
+  };
 
   React.useEffect(() => {
     if (isFocused) {
@@ -26,14 +30,34 @@ export const FavoritesScreen = () => {
     }
   }, [isFocused]);
 
+  React.useEffect(() => {
+    if (!isFocused) return;
+    const onBackPress = () => {
+      handleGoBack();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [isFocused, navigation]);
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Saved Properties</Text>
-        <View style={{ width: 40 }} />
+      <View style={styles.headerRow}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={handleGoBack}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>Saved Properties</Text>
+        </View>
+        {favorites.length > 0 && (
+          <View style={styles.headerPill}>
+            <Text style={styles.headerPillText}>{favorites.length} saved</Text>
+          </View>
+        )}
       </View>
 
       {favorites.length === 0 ? (
@@ -77,37 +101,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
+  },
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    gap: SPACING.xs,
+    flexShrink: 1,
   },
   backBtn: {
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   headerTitle: {
-    ...TYPOGRAPHY.h3,
+    ...TYPOGRAPHY.h2,
     color: COLORS.text,
-    fontWeight: '700',
+    flexShrink: 1,
+  },
+  headerPill: {
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.round,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  headerPillText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textMuted,
   },
   listContent: {
     padding: SPACING.md,
-    alignItems: 'center',
     paddingBottom: SPACING.xxl,
   },
   cardWrap: {
     marginBottom: SPACING.md,
-    width: '100%',
-    maxWidth: 440,
-    alignItems: 'center',
   },
   emptyContainer: {
     flex: 1,
