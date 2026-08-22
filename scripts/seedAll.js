@@ -657,6 +657,10 @@ async function seed() {
   for (let i = 0; i < serviceListings.length; i++) {
     const s = serviceListings[i];
     const provider = providers[s.providerIdx];
+    if (!provider) {
+      console.log(`  [${i + 1}/${serviceListings.length}] SKIPPED (no provider at index ${s.providerIdx}): ${s.title}`);
+      continue;
+    }
     const service = await prisma.serviceProvider.create({
       data: {
         providerId: provider.id,
@@ -679,8 +683,20 @@ async function seed() {
   for (let i = 0; i < flatmateProfiles.length; i++) {
     const f = flatmateProfiles[i];
     const user = regulars[f.userIdx];
-    const profile = await prisma.flatmateProfile.create({
-      data: {
+    const profile = await prisma.flatmateProfile.upsert({
+      where: { userId: user.id },
+      update: {
+        budget: f.budget,
+        lifestyle: JSON.stringify(f.lifestyle),
+        lookingFor: JSON.stringify(f.lookingFor),
+        occupation: f.occupation,
+        bio: f.bio,
+        city: f.city,
+        state: f.state,
+        preferredLocation: f.preferredLocation,
+        moveInDate: new Date(Date.now() + (i + 1) * 7 * 24 * 60 * 60 * 1000), // Staggered move-in dates
+      },
+      create: {
         userId: user.id,
         budget: f.budget,
         lifestyle: JSON.stringify(f.lifestyle),
@@ -693,7 +709,7 @@ async function seed() {
         moveInDate: new Date(Date.now() + (i + 1) * 7 * 24 * 60 * 60 * 1000), // Staggered move-in dates
       },
     });
-    console.log(`  [${i + 1}/${flatmateProfiles.length}] Created flatmate: ${user.name} (${f.city})`);
+    console.log(`  [${i + 1}/${flatmateProfiles.length}] Created/Updated flatmate: ${user.name} (${f.city})`);
   }
 
   // 7. Create reviews
