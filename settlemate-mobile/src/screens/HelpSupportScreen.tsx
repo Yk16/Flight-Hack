@@ -94,12 +94,12 @@ export const HelpSupportScreen = () => {
       setTimeout(() => setToastMessage(null), 3000);
       return;
     }
-    setToastMessage({ text: '🎉 Support ticket submitted successfully! We will get back to you soon.' });
+    setToastMessage({ text: 'Ticket submitted' });
     setSubject('');
     setMessage('');
     setTimeout(() => {
       setToastMessage(null);
-    }, 3500);
+    }, 2800);
   };
 
   const renderFAQItem = (item: FAQItem) => (
@@ -431,28 +431,27 @@ const styles = StyleSheet.create({
   },
   toastBanner: {
     position: 'absolute',
-    top: 60,
-    left: 20,
-    right: 20,
-    backgroundColor: '#064E3B',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.lg,
+    top: 50,
+    alignSelf: 'center',
+    backgroundColor: '#0F172A',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: BORDER_RADIUS.round,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
+    gap: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
     zIndex: 9999,
   },
   toastText: {
-    ...TYPOGRAPHY.body2,
-    color: '#ECFDF5',
-    fontWeight: '700',
-    flex: 1,
+    ...TYPOGRAPHY.caption,
+    color: '#F8FAFC',
+    fontWeight: '600',
+    fontSize: 13,
   },
 });
 
