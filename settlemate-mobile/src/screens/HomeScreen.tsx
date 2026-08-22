@@ -389,20 +389,21 @@ export const HomeScreen = () => {
     (item: FlatmateProfile) => (
       <FlatmateCard
         profile={item}
-        onPress={() => navigation.navigate('FlatmateProfile')}
+        onPress={() => navigation.navigate('FlatmateViewProfile', { profile: item })}
         onChat={() => {
-          if (item.user?.id) {
-            navigation.navigate('Chat', {
-              screen: 'ChatDetail',
-              params: {
-                roomId: `chat-${Math.min(Number(user?.id || 1), item.user.id)}-${Math.max(Number(user?.id || 1), item.user.id)}`,
-                recipientName: item.user.name || 'Flatmate',
-                recipientId: item.user.id,
-              },
-            });
-          } else {
-            navigation.navigate('Chat');
-          }
+          const targetUserId = item.user?.id || (item as any).userId;
+          const currentUserId = Number(user?.id || 1);
+          const generatedRoomId = `chat-${Math.min(currentUserId, targetUserId)}-${Math.max(currentUserId, targetUserId)}`;
+          const personName = item.user?.name || (item as any).name || 'Flatmate';
+
+          navigation.navigate('Chat', {
+            screen: 'ChatThread',
+            params: {
+              roomId: generatedRoomId,
+              recipientName: personName,
+              participantId: targetUserId,
+            },
+          });
         }}
       />
     ),

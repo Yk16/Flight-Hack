@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Pressable,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -142,12 +143,15 @@ export const ChatListScreen = () => {
               ) : null}
             </View>
 
-            {/* Actively Looking Flatmates / Direct Message Row */}
+            {/* Flatmates Nearby / Actively Looking Section */}
             {activePeople.length > 0 && (
               <View style={styles.activeSection}>
                 <View style={styles.sectionRow}>
-                  <Text style={styles.sectionTitle}>Actively Looking Flatmates</Text>
-                  <Text style={styles.sectionMeta}>{activePeople.length} online</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="people" size={18} color={COLORS.primary} />
+                    <Text style={styles.sectionTitle}>Flatmates Nearby</Text>
+                  </View>
+                  <Text style={styles.sectionMeta}>{activePeople.length} looking near you</Text>
                 </View>
                 <FlatList
                   data={activePeople}
@@ -157,24 +161,48 @@ export const ChatListScreen = () => {
                   contentContainerStyle={styles.activeListContent}
                   renderItem={({ item }) => {
                     const name = item.user?.name || item.user?.firstName || 'User';
+                    const avatar = item.user?.avatar;
+                    const location = item.preferredLocation || item.city || 'Ahmedabad';
+                    const budget = item.budget ? `₹${Number(item.budget).toLocaleString('en-IN')}/mo` : '₹18,000/mo';
+
                     return (
                       <TouchableOpacity
-                        style={styles.activePersonCard}
+                        style={styles.nearbyFlatmateCard}
                         onPress={() => startChatWithPerson(item)}
-                        activeOpacity={0.7}
+                        activeOpacity={0.8}
                       >
-                        <View style={styles.activeAvatarWrap}>
-                          <View style={styles.activeAvatar}>
-                            <Text style={styles.activeAvatarText}>{getInitials(name)}</Text>
-                          </View>
+                        <View style={styles.nearbyAvatarWrap}>
+                          {avatar ? (
+                            <Image source={{ uri: avatar }} style={styles.nearbyAvatar} />
+                          ) : (
+                            <View style={styles.nearbyAvatarFallback}>
+                              <Text style={styles.activeAvatarText}>{getInitials(name)}</Text>
+                            </View>
+                          )}
                           <View style={styles.activeGreenDot} />
                         </View>
-                        <Text style={styles.activePersonName} numberOfLines={1}>
-                          {name.split(' ')[0]}
+                        <Text style={styles.nearbyName} numberOfLines={1}>
+                          {name}
                         </Text>
-                        <Text style={styles.activePersonRole} numberOfLines={1}>
-                          {item.occupation || 'Flatmate'}
+                        <Text style={styles.nearbyRole} numberOfLines={1}>
+                          {item.occupation || 'Professional'}
                         </Text>
+                        <View style={styles.nearbyLocationRow}>
+                          <Ionicons name="location-sharp" size={11} color={COLORS.textMuted} />
+                          <Text style={styles.nearbyLocationText} numberOfLines={1}>
+                            {location.split('/')[0].trim()}
+                          </Text>
+                        </View>
+                        <View style={styles.nearbyBudgetBadge}>
+                          <Text style={styles.nearbyBudgetText}>{budget}</Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.nearbyChatBtn}
+                          onPress={() => startChatWithPerson(item)}
+                        >
+                          <Ionicons name="chatbubble" size={12} color={COLORS.surface} />
+                          <Text style={styles.nearbyChatBtnText}>Chat</Text>
+                        </TouchableOpacity>
                       </TouchableOpacity>
                     );
                   }}
@@ -508,15 +536,91 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.surface,
   },
-  activePersonName: {
-    ...TYPOGRAPHY.caption,
-    fontWeight: '700',
-    color: COLORS.text,
-    textAlign: 'center',
-  },
   activePersonRole: {
     fontSize: 9,
     color: COLORS.textMuted,
     textAlign: 'center',
+  },
+
+  // Nearby Flatmate Card Styles
+  nearbyFlatmateCard: {
+    width: 140,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  nearbyAvatarWrap: {
+    position: 'relative',
+    marginBottom: 6,
+  },
+  nearbyAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  nearbyAvatarFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: `${COLORS.primary}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  nearbyName: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '700',
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  nearbyRole: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  nearbyLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginBottom: 4,
+  },
+  nearbyLocationText: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+  },
+  nearbyBudgetBadge: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+    marginBottom: 6,
+  },
+  nearbyBudgetText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  nearbyChatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: BORDER_RADIUS.md,
+    width: '100%',
+  },
+  nearbyChatBtnText: {
+    color: COLORS.surface,
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

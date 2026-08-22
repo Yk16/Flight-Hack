@@ -17,6 +17,7 @@ import { AddServiceScreen } from '../screens/AddServiceScreen';
 import { AddHouseScreen } from '../screens/AddHouseScreen';
 import { HouseDetailsScreen } from '../screens/HouseDetailsScreen';
 import { ServiceDetailsScreen } from '../screens/ServiceDetailsScreen';
+import { FlatmateViewProfileScreen } from '../screens/FlatmateViewProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -159,6 +160,16 @@ export const MainTabNavigator = () => {
         options={{
           tabBarButton: () => null,
           title: 'Service Details',
+          headerShown: false,
+          header: () => null,
+        }}
+      />
+      <Tab.Screen
+        name="FlatmateViewProfile"
+        component={FlatmateViewProfileScreen}
+        options={{
+          tabBarButton: () => null,
+          title: 'Flatmate Profile',
           headerShown: false,
           header: () => null,
         }}
