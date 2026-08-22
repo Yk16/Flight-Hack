@@ -190,6 +190,7 @@ export const HomeScreen = () => {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [priceFilter, setPriceFilter] = useState<'ALL' | 'BUDGET' | 'MID' | 'PREMIUM'>('ALL');
   const [furnishingFilter, setFurnishingFilter] = useState<'ALL' | 'FURNISHED' | 'SEMI_FURNISHED' | 'UNFURNISHED'>('ALL');
+  const [seeAllSection, setSeeAllSection] = useState<{ title: string; type: string } | null>(null);
 
   const sectionRefs = useRef<Record<string, View | null>>({});
 
@@ -279,8 +280,24 @@ export const HomeScreen = () => {
   }, [navigation]);
 
   const handleSeeAll = useCallback((section: string) => {
-    // Placeholder for navigation to full list screens
-  }, []);
+    if (section === 'services') {
+      navigation.navigate('Services');
+      return;
+    }
+
+    const titles: Record<string, string> = {
+      featured: 'Featured Properties',
+      houses: 'Independent Houses',
+      apartments: 'Apartments',
+      rooms: 'Private Rooms',
+      flatmates: 'Find Your Flatmate',
+    };
+
+    setSeeAllSection({
+      title: titles[section] || 'All Listings',
+      type: section,
+    });
+  }, [navigation]);
 
   const filteredHouses = useMemo(() => {
     let result = houses;
@@ -823,6 +840,47 @@ export const HomeScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* See All Full-List Modal */}
+      <Modal
+        visible={!!seeAllSection}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSeeAllSection(null)}
+      >
+        <SafeAreaView style={styles.seeAllModalOverlay}>
+          <View style={styles.seeAllHeader}>
+            <TouchableOpacity onPress={() => setSeeAllSection(null)} style={styles.seeAllBackBtn}>
+              <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <Text style={styles.seeAllTitle} numberOfLines={1}>{seeAllSection?.title}</Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.seeAllListContent} showsVerticalScrollIndicator={false}>
+            {seeAllSection?.type === 'flatmates' ? (
+              flatmates.map((item) => (
+                <View key={`seeall-flat-${item.id}`} style={{ marginBottom: SPACING.md }}>
+                  {renderFlatmateCard(item)}
+                </View>
+              ))
+            ) : (
+              (seeAllSection?.type === 'houses'
+                ? independentHouses
+                : seeAllSection?.type === 'apartments'
+                ? apartments
+                : seeAllSection?.type === 'rooms'
+                ? rooms
+                : filteredHouses
+              ).map((house) => (
+                <View key={`seeall-house-${house.id}`} style={{ marginBottom: SPACING.md }}>
+                  {renderPropertyCard(house)}
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1154,5 +1212,36 @@ const styles = StyleSheet.create({
   filterApplyText: {
     color: COLORS.surface,
     fontWeight: '700',
+  },
+
+  // See All Modal Styles
+  seeAllModalOverlay: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  seeAllHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  seeAllBackBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  seeAllTitle: {
+    ...TYPOGRAPHY.h3,
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  seeAllListContent: {
+    padding: SPACING.md,
+    paddingBottom: SPACING.xxl,
   },
 });

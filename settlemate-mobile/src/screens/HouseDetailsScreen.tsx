@@ -108,6 +108,8 @@ export const HouseDetailsScreen = () => {
     }
   }, [houseId, routeHouse]);
 
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const handleBooking = async () => {
     if (!house) return;
     setBookingLoading(true);
@@ -122,16 +124,14 @@ export const HouseDetailsScreen = () => {
       }
       await createBooking(bookingData);
       
-      const successMsg = 'Your booking request has been sent to the owner!';
-      if (Platform.OS === 'web') {
-        window.alert(successMsg);
-      } else {
-        Alert.alert('Request Sent', successMsg);
-      }
-
       setBookingModalVisible(false);
       setBookingMessage('');
       setCheckInDate('');
+      
+      setToastMessage('🎉 Booking request sent to the owner successfully!');
+      setTimeout(() => {
+        setToastMessage(null);
+      }, 4000);
     } catch (error: any) {
       console.error('[HouseDetailsScreen] Booking error:', error);
       const errMsg = error?.response?.data?.message || error?.message || 'Failed to create booking request';
@@ -531,6 +531,14 @@ export const HouseDetailsScreen = () => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <View style={styles.toastBanner}>
+          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -1044,5 +1052,32 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: COLORS.surface,
     fontWeight: '700',
+  },
+
+  // Floating Toast
+  toastBanner: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: '#064E3B',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+    zIndex: 9999,
+  },
+  toastText: {
+    ...TYPOGRAPHY.body2,
+    color: '#ECFDF5',
+    fontWeight: '700',
+    flex: 1,
   },
 });
