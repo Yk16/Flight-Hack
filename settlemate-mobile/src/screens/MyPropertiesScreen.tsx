@@ -37,26 +37,44 @@ export const MyPropertiesScreen = () => {
   };
 
   const handleDelete = (house: House) => {
-    Alert.alert(
-      'Delete Property',
-      `Delete "${house.title}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteHouse(String(house.id));
-              setProperties((current) => current.filter((item) => item.id !== house.id));
-            } catch (error: any) {
-              console.error('Delete error', error);
-              Alert.alert('Error', error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || 'Failed to delete property');
-            }
+    const doDelete = async () => {
+      try {
+        await deleteHouse(String(house.id));
+        setProperties((current) => current.filter((item) => item.id !== house.id));
+        if (Platform.OS === 'web') {
+          window.alert(`Property "${house.title}" deleted successfully.`);
+        } else {
+          Alert.alert('Deleted', `Property "${house.title}" deleted.`);
+        }
+      } catch (error: any) {
+        console.error('Delete error', error);
+        const errMsg = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || 'Failed to delete property';
+        if (Platform.OS === 'web') {
+          window.alert(`Error: ${errMsg}`);
+        } else {
+          Alert.alert('Error', errMsg);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Delete "${house.title}"? This action cannot be undone.`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Property',
+        `Delete "${house.title}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: doDelete,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   useEffect(() => {

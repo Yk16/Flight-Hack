@@ -258,18 +258,35 @@ export const AddHouseScreen = () => {
 
       if (editingHouseId) {
         await updateHouse(String(editingHouseId), payload);
-        Alert.alert("Success", "Property updated successfully!", [
-          { text: "OK", onPress: () => navigation.navigate("Property Listing") },
-        ]);
+        const msg = "Property updated successfully!";
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+          navigation.navigate("Property Listing");
+        } else {
+          Alert.alert("Success", msg, [
+            { text: "OK", onPress: () => navigation.navigate("Property Listing") },
+          ]);
+        }
       } else {
         await createHouse(payload);
-        Alert.alert("Success", "Property listed successfully!", [
-          { text: "OK", onPress: () => navigation.navigate("Property Listing") },
-        ]);
+        const msg = "Property listed successfully!";
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+          navigation.navigate("Property Listing");
+        } else {
+          Alert.alert("Success", msg, [
+            { text: "OK", onPress: () => navigation.navigate("Property Listing") },
+          ]);
+        }
       }
     } catch (error: any) {
       console.error("Submit error", error);
-      Alert.alert("Error", error?.message || error?.response?.data?.message || "Failed to save property");
+      const errMsg = error?.message || error?.response?.data?.message || "Failed to save property";
+      if (Platform.OS === 'web') {
+        window.alert(`Error: ${errMsg}`);
+      } else {
+        Alert.alert("Error", errMsg);
+      }
     } finally {
       setLoading(false);
     }
