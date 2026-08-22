@@ -10,6 +10,17 @@ async function main() {
 
   const usersData = [
     {
+      email: 'ananya.sharma@settlemate.com',
+      passwordHash,
+      name: 'Ananya Sharma',
+      phone: '+919876543213',
+      status: 'VERIFIED',
+      aadhaarVerified: true,
+      panVerified: true,
+      trustScore: 94,
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+    },
+    {
       email: 'aarav.sharma@settlemate.com',
       passwordHash,
       name: 'Aarav Sharma',

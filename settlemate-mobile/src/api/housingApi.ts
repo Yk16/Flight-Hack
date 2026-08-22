@@ -53,6 +53,7 @@ export const normalizeHouse = (house: any): House => ({
   inquiryCount: parseMaybeNumber(house.inquiryCount),
   createdAt: house.createdAt,
   updatedAt: house.updatedAt,
+  ownerId: house.ownerId ?? house.owner?.id,
   owner: house.owner
     ? {
         id: Number(house.owner.id),
@@ -62,7 +63,12 @@ export const normalizeHouse = (house: any): House => ({
         phone: house.owner.phone,
         aadhaarVerified: Boolean(house.owner.aadhaarVerified),
       }
-    : undefined,
+    : house.ownerId
+      ? {
+          id: Number(house.ownerId),
+          name: 'Owner',
+        }
+      : undefined,
 });
 
 export const fetchHouses = async (): Promise<House[]> => {

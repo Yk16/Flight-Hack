@@ -87,26 +87,22 @@ export const HouseDetailsScreen = () => {
   useEffect(() => {
     if (!houseId) return;
 
-    // If navigating to a different house, update from route params or fetch
-    if (prevHouseIdRef.current !== houseId) {
-      prevHouseIdRef.current = houseId;
-      setActiveImageIndex(0);
-
-      if (routeHouse) {
-        setHouse(routeHouse);
-      } else {
-        setLoading(true);
-        setHouse(null);
-        fetchHouseById(String(houseId))
-          .then((result) => setHouse(result))
-          .catch((error) => {
-            console.error('[HouseDetailsScreen] Failed to load house', error);
-            Alert.alert('Error', 'Failed to load property details');
-          })
-          .finally(() => setLoading(false));
-      }
+    if (routeHouse) {
+      setHouse(routeHouse);
     }
-  }, [houseId, routeHouse]);
+
+    setLoading(!routeHouse);
+    fetchHouseById(String(houseId))
+      .then((result) => {
+        if (result) {
+          setHouse(result);
+        }
+      })
+      .catch((error) => {
+        console.error('[HouseDetailsScreen] Failed to load house', error);
+      })
+      .finally(() => setLoading(false));
+  }, [houseId]);
 
   const [toastMessage, setToastMessage] = useState<{ text: string; isError?: boolean } | null>(null);
 
@@ -183,11 +179,16 @@ export const HouseDetailsScreen = () => {
     }
   };
 
-  const isOwner = Boolean(user?.id && house?.owner?.id && Number(user.id) === Number(house.owner.id));
+  const ownerIdValue = (house as any)?.ownerId || (house as any)?.owner?.id || (typeof (house as any)?.owner === 'number' || typeof (house as any)?.owner === 'string' ? (house as any)?.owner : undefined);
+  const isOwner = Boolean(
+    user?.id &&
+    ownerIdValue &&
+    String(user.id) === String(ownerIdValue)
+  );
   const canEdit = isOwner && house?.status !== 'RENTED';
   const photos = house?.images?.length
     ? house.images
-    : ['https://via.placeholder.com/900x600?text=No+Image+Available'];
+    : ['https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=1200&auto=format&fit=crop&q=80'];
 
   // --- Loading state ---
   if (loading && !house) {

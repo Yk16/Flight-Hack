@@ -11,6 +11,9 @@ router.use(authenticate);
 // Get user's active conversations
 router.get('/rooms', chatController.getMyRooms);
 
+// Send message via REST
+router.post('/messages', chatController.sendMessage);
+
 // Get messages for a specific room
 router.get(
     '/:roomId/messages',

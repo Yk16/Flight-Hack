@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, Alert, Platform, useWindowDimensions } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/authStore';
@@ -17,6 +17,7 @@ export const MyPropertiesScreen = () => {
   const { width } = useWindowDimensions();
   const [properties, setProperties] = useState<House[]>([]);
   const [loading, setLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ text: string; isError?: boolean } | null>(null);
   const compact = width < 380;
   const fabOffset = compact ? SPACING.md : SPACING.lg;
 
@@ -30,7 +31,8 @@ export const MyPropertiesScreen = () => {
       setProperties(houses);
     } catch (err: any) {
       console.error('Fetch error', err);
-      Alert.alert('Error', 'Failed to load properties');
+      setToastMessage({ text: 'Failed to load properties', isError: true });
+      setTimeout(() => setToastMessage(null), 3500);
     } finally {
       setLoading(false);
     }
@@ -41,19 +43,13 @@ export const MyPropertiesScreen = () => {
       try {
         await deleteHouse(String(house.id));
         setProperties((current) => current.filter((item) => item.id !== house.id));
-        if (Platform.OS === 'web') {
-          window.alert(`Property "${house.title}" deleted successfully.`);
-        } else {
-          Alert.alert('Deleted', `Property "${house.title}" deleted.`);
-        }
+        setToastMessage({ text: `🗑️ Property "${house.title}" deleted successfully.` });
+        setTimeout(() => setToastMessage(null), 3000);
       } catch (error: any) {
         console.error('Delete error', error);
         const errMsg = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || 'Failed to delete property';
-        if (Platform.OS === 'web') {
-          window.alert(`Error: ${errMsg}`);
-        } else {
-          Alert.alert('Error', errMsg);
-        }
+        setToastMessage({ text: `⚠️ ${errMsg}`, isError: true });
+        setTimeout(() => setToastMessage(null), 4000);
       }
     };
 
@@ -105,14 +101,10 @@ export const MyPropertiesScreen = () => {
           keyExtractor={(i) => String(i.id)}
           renderItem={({ item }) => (
             <View style={styles.cardGroup}>
-              <HouseCard house={item} onPress={() => navigation.navigate('HouseDetails', { house: item })} />
-              <View style={styles.detailsCard}>
-                <View style={styles.detailRow}><Text style={styles.detailLabel}>Location</Text><Text style={styles.detailValue}>{[item.addressLine1, item.city, item.state].filter(Boolean).join(', ') || 'N/A'}</Text></View>
-                <View style={styles.detailRow}><Text style={styles.detailLabel}>Type</Text><Text style={styles.detailValue}>{item.type || 'N/A'}</Text></View>
-                <View style={styles.detailRow}><Text style={styles.detailLabel}>Tenants</Text><Text style={styles.detailValue}>{(item.preferredTenants || []).join(', ') || 'Any'}</Text></View>
-                <View style={styles.detailRow}><Text style={styles.detailLabel}>Photos</Text><Text style={styles.detailValue}>{item.images?.length || 0}</Text></View>
-                <View style={styles.detailRow}><Text style={styles.detailLabel}>Available</Text><Text style={styles.detailValue}>{item.availableFrom ? new Date(item.availableFrom).toLocaleDateString('en-GB') : 'N/A'}</Text></View>
-              </View>
+              <HouseCard
+                house={item}
+                onPress={() => navigation.navigate('HouseDetails', { house: item })}
+              />
               <View style={styles.actionRow}>
                 <TouchableOpacity
                   style={[styles.actionButton, item.status === 'RENTED' && styles.actionButtonDisabled]}
@@ -126,7 +118,10 @@ export const MyPropertiesScreen = () => {
                   <Ionicons name="trash-outline" size={16} color={COLORS.error} />
                   <Text style={styles.deleteText}>Delete</Text>
                 </TouchableOpacity>
-                <Text style={styles.statusText}>{item.status || 'AVAILABLE'}</Text>
+                <View style={styles.statusBadge}>
+                  <View style={[styles.statusDot, item.status === 'RENTED' ? styles.statusDotRented : styles.statusDotAvail]} />
+                  <Text style={styles.statusText}>{item.status?.replace(/_/g, ' ') || 'AVAILABLE'}</Text>
+                </View>
               </View>
             </View>
           )}
@@ -153,6 +148,30 @@ export const MyPropertiesScreen = () => {
       >
         <Ionicons name="add" size={28} color={COLORS.surface} />
       </TouchableOpacity>
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <View
+          style={[
+            styles.toastBanner,
+            toastMessage.isError && { backgroundColor: '#7F1D1D' },
+          ]}
+        >
+          <Ionicons
+            name={toastMessage.isError ? 'alert-circle' : 'checkmark-circle'}
+            size={20}
+            color={toastMessage.isError ? '#FCA5A5' : '#10B981'}
+          />
+          <Text
+            style={[
+              styles.toastText,
+              toastMessage.isError && { color: '#FEF2F2' },
+            ]}
+          >
+            {toastMessage.text}
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -213,11 +232,32 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   deleteText: { color: COLORS.error, fontWeight: '700' },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.background,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusDotAvail: {
+    backgroundColor: '#10B981',
+  },
+  statusDotRented: {
+    backgroundColor: '#EF4444',
+  },
   statusText: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+    fontWeight: '600',
   },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: SPACING.xxl },
   emptyTitle: { ...TYPOGRAPHY.h3, color: COLORS.text, marginTop: SPACING.lg },
@@ -240,6 +280,31 @@ const styles = StyleSheet.create({
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: SPACING.lg },
   errorTitle: { ...TYPOGRAPHY.h2, color: COLORS.text, marginTop: SPACING.lg },
   errorText: { ...TYPOGRAPHY.body2, color: COLORS.textMuted, marginTop: SPACING.sm, textAlign: 'center' },
+  toastBanner: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: '#064E3B',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+    zIndex: 9999,
+  },
+  toastText: {
+    ...TYPOGRAPHY.body2,
+    color: '#ECFDF5',
+    fontWeight: '700',
+    flex: 1,
+  },
 });
 
 

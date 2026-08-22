@@ -197,14 +197,15 @@ export const ChatScreen = () => {
       replyToText: replyingTo?.content ? replyingTo.content.slice(0, 80) : undefined,
     };
 
+    // Emit over socket if connected for instant real-time sync across devices
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('send_message', payload);
     } else {
-      // Fallback REST endpoint if socket temporarily disconnected
+      // Guaranteed REST fallback persistence
       try {
-        await apiClient.post('/chat/messages', payload).catch(() => {});
+        await apiClient.post('/chat/messages', payload);
       } catch (e) {
-        // ignore
+        console.error('[ChatScreen] Error sending message via REST:', e);
       }
     }
 
@@ -247,7 +248,16 @@ export const ChatScreen = () => {
       >
         {/* Chat Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate('ChatInbox');
+              }
+            }}
+          >
             <Ionicons name="chevron-back" size={24} color={COLORS.text} />
           </TouchableOpacity>
           <View style={styles.headerAvatar}>

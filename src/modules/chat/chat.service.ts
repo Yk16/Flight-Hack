@@ -127,14 +127,16 @@ export class ChatService {
      * Get user's active chat conversations with last message & participant info
      */
     async getUserConversations(userId: number) {
-        // Find distinct rooms where user participated or is part of
+        // Find all messages where user participated or room matches user ID
+        const userStr = String(userId);
         const messages = await (prisma.message as any).findMany({
             where: {
                 OR: [
                     { senderId: userId },
-                    { roomId: { contains: `-${userId}-` } },
-                    { roomId: { endsWith: `-${userId}` } },
-                    { roomId: { startsWith: `chat-${userId}-` } },
+                    { roomId: { contains: `-${userStr}-` } },
+                    { roomId: { endsWith: `-${userStr}` } },
+                    { roomId: { startsWith: `chat-${userStr}-` } },
+                    { roomId: { contains: userStr } },
                 ],
             },
             orderBy: { createdAt: 'desc' },
@@ -153,13 +155,14 @@ export class ChatService {
         const roomsMap = new Map<string, any>();
         for (const msg of messages) {
             if (!roomsMap.has(msg.roomId)) {
-                // Determine other participant ID from roomId convention "chat-id1-id2"
+                // Determine other participant ID from roomId convention or sender
                 let otherUserId: number | null = null;
                 const parts = msg.roomId.split('-');
-                if (parts.length >= 3 && !isNaN(Number(parts[1])) && !isNaN(Number(parts[2]))) {
-                    const id1 = Number(parts[1]);
-                    const id2 = Number(parts[2]);
-                    otherUserId = id1 === userId ? id2 : id1;
+                const ids = parts.map(p => Number(p)).filter(n => !isNaN(n) && n > 0);
+                if (ids.length >= 2) {
+                    otherUserId = ids[0] === userId ? ids[1] : ids[0];
+                } else if (msg.senderId !== userId) {
+                    otherUserId = msg.senderId;
                 }
 
                 roomsMap.set(msg.roomId, {
@@ -189,11 +192,14 @@ export class ChatService {
                 },
             });
 
+            const senderName = item.lastMessage?.sender?.name;
+            const fallbackName = otherUser?.name || otherUser?.email?.split('@')[0] || (item.lastMessage?.senderId !== userId ? senderName : 'Flatmate / User');
+
             results.push({
                 roomId,
-                participantName: otherUser?.name || otherUser?.email?.split('@')[0] || (item.lastMessage?.senderId !== userId ? item.lastMessage?.sender?.name : 'Support'),
+                participantName: fallbackName,
                 participantAvatar: otherUser?.avatar || null,
-                participantId: otherUser?.id || null,
+                participantId: otherUser?.id || item.otherUserId || null,
                 lastMessage: item.lastMessage,
                 unreadCount,
                 updatedAt: item.lastMessage?.createdAt,

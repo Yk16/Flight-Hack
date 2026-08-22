@@ -86,17 +86,20 @@ export const HelpSupportScreen = () => {
     },
   ];
 
+  const [toastMessage, setToastMessage] = useState<{ text: string; isError?: boolean } | null>(null);
+
   const handleSubmitTicket = () => {
     if (!subject.trim() || !message.trim()) {
-      Alert.alert('Validation Error', 'Please fill in both subject and message');
+      setToastMessage({ text: 'Please fill in both subject and message', isError: true });
+      setTimeout(() => setToastMessage(null), 3000);
       return;
     }
-    Alert.alert(
-      'Success',
-      'Support ticket submitted successfully! We will get back to you soon.'
-    );
+    setToastMessage({ text: '🎉 Support ticket submitted successfully! We will get back to you soon.' });
     setSubject('');
     setMessage('');
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
   };
 
   const renderFAQItem = (item: FAQItem) => (
@@ -220,6 +223,30 @@ export const HelpSupportScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <View
+          style={[
+            styles.toastBanner,
+            toastMessage.isError && { backgroundColor: '#7F1D1D' },
+          ]}
+        >
+          <Ionicons
+            name={toastMessage.isError ? 'alert-circle' : 'checkmark-circle'}
+            size={20}
+            color={toastMessage.isError ? '#FCA5A5' : '#10B981'}
+          />
+          <Text
+            style={[
+              styles.toastText,
+              toastMessage.isError && { color: '#FEF2F2' },
+            ]}
+          >
+            {toastMessage.text}
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -400,6 +427,31 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body2,
     fontWeight: '600',
     color: COLORS.primary,
+    flex: 1,
+  },
+  toastBanner: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    backgroundColor: '#064E3B',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+    zIndex: 9999,
+  },
+  toastText: {
+    ...TYPOGRAPHY.body2,
+    color: '#ECFDF5',
+    fontWeight: '700',
     flex: 1,
   },
 });

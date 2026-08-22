@@ -102,11 +102,7 @@ export const ProfileScreen = () => {
       icon: 'home',
       color: '#8B5CF6',
       onPress: () => {
-        if (!user?.isOwner && !user?.isProvider) {
-          navigation.navigate('UpgradeRequest');
-        } else {
-          Alert.alert('Info', 'You are already a Host/Provider');
-        }
+        navigation.navigate('UpgradeRequest');
       },
     },
     {
@@ -496,15 +492,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   logoutIconWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FEE2E2',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: `${COLORS.primary}18`,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.md,
+    borderWidth: 2,
+    borderColor: `${COLORS.primary}35`,
   },
   logoutModalTitle: {
     ...TYPOGRAPHY.h3,
@@ -543,10 +543,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.error,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.error,
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

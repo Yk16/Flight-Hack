@@ -244,7 +244,7 @@ export const HomeScreen = () => {
         UIManager.measureLayout(
           handle,
           findNodeHandle(scrollViewRef.current)!,
-          () => {},
+          () => { },
           (_x, y) => {
             scrollViewRef.current?.scrollTo({ y: y - 10, animated: true });
           }
@@ -306,7 +306,11 @@ export const HomeScreen = () => {
 
     // Filter out current user's own listings so Home page only shows others' properties to explore/book
     if (user?.id) {
-      result = result.filter((h) => Number(h.ownerId || (h as any).owner?.id) !== Number(user.id));
+      const currentUid = String(user.id);
+      result = result.filter((h) => {
+        const ownerUid = String((h as any).ownerId || (h as any).owner?.id || h.owner || '');
+        return ownerUid !== currentUid;
+      });
     }
 
     if (searchQuery.trim()) {
@@ -877,10 +881,10 @@ export const HomeScreen = () => {
                 (seeAllSection?.type === 'houses'
                   ? independentHouses
                   : seeAllSection?.type === 'apartments'
-                  ? apartments
-                  : seeAllSection?.type === 'rooms'
-                  ? rooms
-                  : filteredHouses
+                    ? apartments
+                    : seeAllSection?.type === 'rooms'
+                      ? rooms
+                      : filteredHouses
                 ).map((house) => (
                   <View key={`seeall-house-${house.id}`} style={{ marginBottom: SPACING.md }}>
                     {renderPropertyCard(house)}

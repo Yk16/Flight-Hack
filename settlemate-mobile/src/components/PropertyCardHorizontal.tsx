@@ -50,7 +50,7 @@ export const PropertyCardHorizontal = ({ house, onPress, onFavorite }: PropertyC
     }
   };
 
-  const imageUrl = house.images?.[0] || 'https://via.placeholder.com/400x250?text=No+Image';
+  const imageUrl = house.images?.[0] || 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&auto=format&fit=crop&q=80';
 
   return (
     <Animated.View style={[styles.cardWrapper, { transform: [{ scale: scaleAnim }] }]}>
@@ -75,9 +75,13 @@ export const PropertyCardHorizontal = ({ house, onPress, onFavorite }: PropertyC
             </View>
           ) : null}
           <TouchableOpacity
-            style={[styles.favoriteBtn, liked && { backgroundColor: 'rgba(239, 68, 68, 0.9)' }]}
-            onPress={handleHeartPress}
+            style={[styles.favoriteBtn, liked && { backgroundColor: 'rgba(239, 68, 68, 0.95)' }]}
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              handleHeartPress();
+            }}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color="#FFFFFF" />
           </TouchableOpacity>
@@ -202,12 +206,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: SPACING.sm,
     right: SPACING.sm,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+    elevation: 5,
   },
   content: {
     padding: SPACING.md,

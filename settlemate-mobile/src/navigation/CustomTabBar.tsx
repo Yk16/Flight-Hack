@@ -55,8 +55,15 @@ export const CustomTabBar: React.FC<CustomTabBarProps> = ({
             defaultPrevented: false,
           });
 
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
+          if (!event.defaultPrevented) {
+            // Navigate to tab root (e.g. ChatInbox for Chat)
+            if (route.name === 'Chat') {
+              navigation.navigate('Chat', { screen: 'ChatInbox' });
+            } else if (route.name === 'Profile') {
+              navigation.navigate('Profile', { screen: 'ProfileHome' });
+            } else {
+              navigation.navigate(route.name);
+            }
           }
         };
 

@@ -264,6 +264,18 @@ export class HousingService {
                 skip,
                 take: limit,
                 orderBy: { [sortBy]: sortOrder },
+                include: {
+                    owner: {
+                        select: {
+                            id: true,
+                            name: true,
+                            avatar: true,
+                            trustScore: true,
+                            phone: true,
+                            aadhaarVerified: true,
+                        },
+                    },
+                },
             }),
             prisma.house.count({ where }),
         ]);

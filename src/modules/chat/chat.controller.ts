@@ -15,6 +15,15 @@ export class ChatController {
     });
 
     /**
+     * POST /api/v1/chat/messages
+     */
+    sendMessage = asyncHandler(async (req: Request, res: Response) => {
+        const { roomId, content, replyToId, replyToText } = req.body;
+        const message = await chatService.saveMessage(req.user!.userId, roomId, content, replyToId, replyToText);
+        successResponse(res, message, 'Message sent successfully', 201);
+    });
+
+    /**
      * GET /api/v1/chat/rooms
      */
     getMyRooms = asyncHandler(async (req: Request, res: Response) => {

@@ -30,13 +30,17 @@ export const HouseCard = ({ house, onPress, onFavorite }: HouseCardProps) => {
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={{ position: 'relative' }}>
         <Image 
-          source={{ uri: house.images?.[0] || 'https://via.placeholder.com/400x250?text=No+Image+Available' }} 
+          source={{ uri: house.images?.[0] || 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&auto=format&fit=crop&q=80' }} 
           style={styles.image} 
         />
         <TouchableOpacity
-          style={[styles.favoriteBtn, liked && { backgroundColor: 'rgba(239, 68, 68, 0.9)' }]}
-          onPress={handleHeartPress}
+          style={[styles.favoriteBtn, liked && { backgroundColor: 'rgba(239, 68, 68, 0.95)' }]}
+          onPress={(e) => {
+            e?.stopPropagation?.();
+            handleHeartPress();
+          }}
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color="#FFFFFF" />
         </TouchableOpacity>
@@ -142,5 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+    elevation: 5,
   },
 });

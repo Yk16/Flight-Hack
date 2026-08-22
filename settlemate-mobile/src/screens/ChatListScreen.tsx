@@ -43,17 +43,18 @@ export const ChatListScreen = () => {
     try {
       const [chatRes, flatmatesRes] = await Promise.all([
         apiClient.get('/chat/rooms'),
-        apiClient.get('/flatmates/search?limit=10').catch(() => ({ data: { data: { profiles: [] } } })),
+        apiClient.get('/flatmates?limit=10').catch(() => ({ data: { data: { profiles: [] } } })),
       ]);
 
       const liveRooms = chatRes.data?.data || chatRes.data || [];
-      const profiles = flatmatesRes.data?.data?.profiles || flatmatesRes.data?.profiles || [];
+      const flatmateData = flatmatesRes.data?.data || flatmatesRes.data || {};
+      const profiles = flatmateData.profiles || flatmateData || [];
 
       // Filter out current user from flatmates list
-      const otherPeople = profiles.filter((p: any) => p.user?.id !== Number(user?.id));
+      const otherPeople = (Array.isArray(profiles) ? profiles : []).filter((p: any) => p.user?.id !== Number(user?.id));
       setActivePeople(otherPeople);
 
-      // Set strictly to legitimate database rooms (no mock dummy chats)
+      // Set strictly to legitimate database rooms
       setConversations(liveRooms);
     } catch (err) {
       console.warn('Failed to load conversations:', err);
@@ -244,11 +245,38 @@ export const ChatListScreen = () => {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="chatbubble-ellipses-outline" size={32} color={COLORS.textMuted} />
-              <Text style={styles.emptyTitle}>No chats found</Text>
+              <Ionicons name="chatbubbles-outline" size={44} color={COLORS.primary} />
+              <Text style={styles.emptyTitle}>Start Chat with Flatmates</Text>
               <Text style={styles.emptyText}>
-                Send a message to a property owner or flatmate to start chatting.
+                Tap any nearby flatmate above or choose someone below to say hi!
               </Text>
+              {activePeople.length > 0 && (
+                <View style={styles.quickStartFlatmatesList}>
+                  {activePeople.slice(0, 3).map((person) => {
+                    const name = person.user?.name || person.user?.firstName || 'Flatmate';
+                    return (
+                      <TouchableOpacity
+                        key={`quick-${person.id}`}
+                        style={styles.quickStartCard}
+                        onPress={() => startChatWithPerson(person)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.quickAvatar}>
+                          <Text style={styles.quickAvatarText}>{getInitials(name)}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.quickName}>{name}</Text>
+                          <Text style={styles.quickRole}>{person.occupation || 'Flatmate'} • {person.preferredLocation || 'Ahmedabad'}</Text>
+                        </View>
+                        <View style={styles.quickChatBadge}>
+                          <Ionicons name="chatbubble" size={14} color={COLORS.surface} />
+                          <Text style={styles.quickChatBadgeText}>Say Hi</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           )
         }
@@ -621,6 +649,59 @@ const styles = StyleSheet.create({
   nearbyChatBtnText: {
     color: COLORS.surface,
     fontSize: 11,
+    fontWeight: '700',
+  },
+
+  // Quick start flatmates list in empty state
+  quickStartFlatmatesList: {
+    width: '100%',
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  quickStartCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: SPACING.sm,
+  },
+  quickAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: `${COLORS.primary}18`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickAvatarText: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  quickName: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  quickRole: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  quickChatBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  quickChatBadgeText: {
+    color: COLORS.surface,
+    fontSize: 12,
     fontWeight: '700',
   },
 });
