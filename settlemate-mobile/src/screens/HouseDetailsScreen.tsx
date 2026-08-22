@@ -18,7 +18,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/authStore';
-import { fetchHouseById } from '../api/housingApi';
+import { fetchHouseById, deleteHouse } from '../api/housingApi';
 import { createBooking } from '../api/bookingApi';
 import { House } from '../types/housing';
 import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/colors';
@@ -147,6 +147,39 @@ export const HouseDetailsScreen = () => {
       }, 4500);
     } finally {
       setBookingLoading(false);
+    }
+  };
+
+  const handleDeleteProperty = () => {
+    if (!house) return;
+
+    const performDelete = async () => {
+      try {
+        await deleteHouse(String(house.id));
+        setToastMessage({ text: '🗑️ Property deleted successfully!' });
+        setTimeout(() => {
+          navigation.goBack();
+        }, 1000);
+      } catch (e: any) {
+        const err = e?.response?.data?.error?.message || e?.message || 'Failed to delete property';
+        setToastMessage({ text: `⚠️ ${err}`, isError: true });
+        setTimeout(() => setToastMessage(null), 4000);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to permanently delete "${house.title}"?`)) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Property',
+        `Are you sure you want to permanently delete "${house.title}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: performDelete },
+        ]
+      );
     }
   };
 
@@ -297,10 +330,23 @@ export const HouseDetailsScreen = () => {
           {/* Action Buttons */}
           <View style={styles.actionRow}>
             {canEdit ? (
-              <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('AddHouse', { house })}>
-                <Ionicons name="create-outline" size={18} color={COLORS.surface} />
-                <Text style={styles.primaryButtonText}>Edit Listing</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: SPACING.sm, width: '100%' }}>
+                <TouchableOpacity
+                  style={[styles.primaryButton, { flex: 1 }]}
+                  onPress={() => navigation.navigate('AddHouse', { house })}
+                >
+                  <Ionicons name="create-outline" size={18} color={COLORS.surface} />
+                  <Text style={styles.primaryButtonText}>Edit Listing</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.primaryButton, { flex: 1, backgroundColor: COLORS.error }]}
+                  onPress={handleDeleteProperty}
+                >
+                  <Ionicons name="trash-outline" size={18} color={COLORS.surface} />
+                  <Text style={styles.primaryButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
             ) : isOwner ? (
               <View style={styles.lockedNotice}>
                 <Ionicons name="lock-closed-outline" size={16} color={COLORS.textMuted} />

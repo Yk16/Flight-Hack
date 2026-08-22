@@ -16,7 +16,6 @@ import { useAuthStore } from '../store/authStore';
 import apiClient from '../api/client';
 import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/colors';
 import { moderateScale, verticalScale } from '../utils/responsive';
-import { CHAT_CONVERSATIONS } from '../data/chatData';
 
 const FILTERS: Array<'All' | 'Unread' | 'Support'> = ['All', 'Unread', 'Support'];
 
@@ -53,14 +52,11 @@ export const ChatListScreen = () => {
       const otherPeople = profiles.filter((p: any) => p.user?.id !== Number(user?.id));
       setActivePeople(otherPeople);
 
-      if (liveRooms.length > 0) {
-        setConversations(liveRooms);
-      } else {
-        setConversations(CHAT_CONVERSATIONS);
-      }
+      // Set strictly to legitimate database rooms (no mock dummy chats)
+      setConversations(liveRooms);
     } catch (err) {
       console.warn('Failed to load conversations:', err);
-      setConversations(CHAT_CONVERSATIONS);
+      setConversations([]);
     } finally {
       setLoading(false);
     }

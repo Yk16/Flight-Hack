@@ -304,6 +304,11 @@ export const HomeScreen = () => {
   const filteredHouses = useMemo(() => {
     let result = houses;
 
+    // Filter out current user's own listings so Home page only shows others' properties to explore/book
+    if (user?.id) {
+      result = result.filter((h) => Number(h.ownerId || (h as any).owner?.id) !== Number(user.id));
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -327,7 +332,7 @@ export const HomeScreen = () => {
     }
 
     return result;
-  }, [houses, searchQuery, priceFilter, furnishingFilter]);
+  }, [houses, searchQuery, priceFilter, furnishingFilter, user?.id]);
 
   const featuredHouses = useMemo(
     () =>
