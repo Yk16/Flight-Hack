@@ -849,36 +849,38 @@ export const HomeScreen = () => {
         onRequestClose={() => setSeeAllSection(null)}
       >
         <SafeAreaView style={styles.seeAllModalOverlay}>
-          <View style={styles.seeAllHeader}>
-            <TouchableOpacity onPress={() => setSeeAllSection(null)} style={styles.seeAllBackBtn}>
-              <Ionicons name="chevron-back" size={24} color={COLORS.text} />
-            </TouchableOpacity>
-            <Text style={styles.seeAllTitle} numberOfLines={1}>{seeAllSection?.title}</Text>
-            <View style={{ width: 40 }} />
-          </View>
+          <View style={styles.seeAllContainer}>
+            <View style={styles.seeAllHeader}>
+              <TouchableOpacity onPress={() => setSeeAllSection(null)} style={styles.seeAllBackBtn}>
+                <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+              <Text style={styles.seeAllTitle} numberOfLines={1}>{seeAllSection?.title}</Text>
+              <View style={{ width: 40 }} />
+            </View>
 
-          <ScrollView contentContainerStyle={styles.seeAllListContent} showsVerticalScrollIndicator={false}>
-            {seeAllSection?.type === 'flatmates' ? (
-              flatmates.map((item) => (
-                <View key={`seeall-flat-${item.id}`} style={{ marginBottom: SPACING.md }}>
-                  {renderFlatmateCard(item)}
-                </View>
-              ))
-            ) : (
-              (seeAllSection?.type === 'houses'
-                ? independentHouses
-                : seeAllSection?.type === 'apartments'
-                ? apartments
-                : seeAllSection?.type === 'rooms'
-                ? rooms
-                : filteredHouses
-              ).map((house) => (
-                <View key={`seeall-house-${house.id}`} style={{ marginBottom: SPACING.md }}>
-                  {renderPropertyCard(house)}
-                </View>
-              ))
-            )}
-          </ScrollView>
+            <ScrollView contentContainerStyle={styles.seeAllListContent} showsVerticalScrollIndicator={false}>
+              {seeAllSection?.type === 'flatmates' ? (
+                flatmates.map((item) => (
+                  <View key={`seeall-flat-${item.id}`} style={{ marginBottom: SPACING.md }}>
+                    {renderFlatmateCard(item)}
+                  </View>
+                ))
+              ) : (
+                (seeAllSection?.type === 'houses'
+                  ? independentHouses
+                  : seeAllSection?.type === 'apartments'
+                  ? apartments
+                  : seeAllSection?.type === 'rooms'
+                  ? rooms
+                  : filteredHouses
+                ).map((house) => (
+                  <View key={`seeall-house-${house.id}`} style={{ marginBottom: SPACING.md }}>
+                    {renderPropertyCard(house)}
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -1218,6 +1220,12 @@ const styles = StyleSheet.create({
   seeAllModalOverlay: {
     flex: 1,
     backgroundColor: COLORS.background,
+    alignItems: 'center',
+  },
+  seeAllContainer: {
+    width: '100%',
+    maxWidth: 600,
+    flex: 1,
   },
   seeAllHeader: {
     flexDirection: 'row',
@@ -1239,9 +1247,11 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.h3,
     color: COLORS.text,
     textAlign: 'center',
+    flex: 1,
   },
   seeAllListContent: {
     padding: SPACING.md,
     paddingBottom: SPACING.xxl,
+    alignItems: 'center',
   },
 });
