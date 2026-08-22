@@ -13,6 +13,7 @@ import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/colors';
 export interface MessageActionItem {
   id: number;
   senderId: number;
+  roomId?: string;
   senderName?: string;
   content: string;
   createdAt: string;

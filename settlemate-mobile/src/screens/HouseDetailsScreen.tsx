@@ -124,58 +124,51 @@ export const HouseDetailsScreen = () => {
       setBookingMessage('');
       setCheckInDate('');
       
-      setToastMessage({ text: '🎉 Booking request sent to the owner successfully!' });
+      setToastMessage({ text: 'Booking request sent' });
       setTimeout(() => {
         setToastMessage(null);
-      }, 4000);
+      }, 3000);
     } catch (error: any) {
       console.error('[HouseDetailsScreen] Booking error:', error);
       const errMsg =
         error?.response?.data?.error?.message ||
         error?.response?.data?.message ||
         error?.message ||
-        'Failed to create booking request';
+        'Unable to send booking request';
 
       setBookingModalVisible(false);
-      setToastMessage({ text: `⚠️ ${errMsg}`, isError: true });
+      setToastMessage({ text: errMsg, isError: true });
       setTimeout(() => {
         setToastMessage(null);
-      }, 4500);
+      }, 3500);
     } finally {
       setBookingLoading(false);
     }
   };
 
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const handleDeleteProperty = () => {
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
     if (!house) return;
-
-    const performDelete = async () => {
-      try {
-        await deleteHouse(String(house.id));
-        setToastMessage({ text: '🗑️ Property deleted successfully!' });
-        setTimeout(() => {
-          navigation.goBack();
-        }, 1000);
-      } catch (e: any) {
-        const err = e?.response?.data?.error?.message || e?.message || 'Failed to delete property';
-        setToastMessage({ text: `⚠️ ${err}`, isError: true });
-        setTimeout(() => setToastMessage(null), 4000);
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to permanently delete "${house.title}"?`)) {
-        performDelete();
-      }
-    } else {
-      Alert.alert(
-        'Delete Property',
-        `Are you sure you want to permanently delete "${house.title}"?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: performDelete },
-        ]
-      );
+    try {
+      setDeleteLoading(true);
+      await deleteHouse(String(house.id));
+      setDeleteModalVisible(false);
+      setToastMessage({ text: 'Listing removed' });
+      setTimeout(() => {
+        navigation.goBack();
+      }, 1000);
+    } catch (e: any) {
+      const err = e?.response?.data?.error?.message || e?.message || 'Failed to remove listing';
+      setToastMessage({ text: err, isError: true });
+      setTimeout(() => setToastMessage(null), 3500);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -584,6 +577,47 @@ export const HouseDetailsScreen = () => {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Branded Delete Confirmation Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalCard}>
+            <View style={styles.deleteIconCircle}>
+              <Ionicons name="trash" size={28} color={COLORS.error} />
+            </View>
+            <Text style={styles.deleteModalTitle}>Remove Property?</Text>
+            <Text style={styles.deleteModalDesc}>
+              Are you sure you want to delete <Text style={{ fontWeight: '700', color: COLORS.text }}>"{house?.title}"</Text>? This action cannot be undone.
+            </Text>
+
+            <View style={styles.deleteModalActions}>
+              <TouchableOpacity
+                style={styles.cancelModalBtn}
+                onPress={() => setDeleteModalVisible(false)}
+                disabled={deleteLoading}
+              >
+                <Text style={styles.cancelModalText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmDeleteBtn}
+                onPress={confirmDelete}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmDeleteText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Floating Toast Notification */}
       {toastMessage && (
         <View
@@ -594,7 +628,7 @@ export const HouseDetailsScreen = () => {
         >
           <Ionicons
             name={toastMessage.isError ? 'alert-circle' : 'checkmark-circle'}
-            size={20}
+            size={16}
             color={toastMessage.isError ? '#FCA5A5' : '#10B981'}
           />
           <Text
@@ -1123,29 +1157,102 @@ const styles = StyleSheet.create({
   },
 
   // Floating Toast
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  deleteModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.lg,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  deleteIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  deleteModalTitle: {
+    ...TYPOGRAPHY.h3,
+    color: '#0F172A',
+    fontWeight: '800',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  deleteModalDesc: {
+    ...TYPOGRAPHY.body2,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: SPACING.lg,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    width: '100%',
+  },
+  cancelModalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelModalText: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  confirmDeleteBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmDeleteText: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   toastBanner: {
     position: 'absolute',
     top: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: '#064E3B',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.lg,
+    alignSelf: 'center',
+    backgroundColor: '#0F172A',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: BORDER_RADIUS.round,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
+    gap: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
     zIndex: 9999,
   },
   toastText: {
-    ...TYPOGRAPHY.body2,
-    color: '#ECFDF5',
-    fontWeight: '700',
-    flex: 1,
+    ...TYPOGRAPHY.caption,
+    color: '#F8FAFC',
+    fontWeight: '600',
+    fontSize: 13,
   },
 });

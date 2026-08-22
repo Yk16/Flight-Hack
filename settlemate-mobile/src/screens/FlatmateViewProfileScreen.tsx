@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   statValue: {
-    ...TYPOGRAPHY.subtitle1,
+    ...TYPOGRAPHY.body1,
     color: COLORS.primary,
     fontWeight: '700',
   },
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   sectionTitle: {
-    ...TYPOGRAPHY.subtitle1,
+    ...TYPOGRAPHY.body1,
     color: COLORS.text,
     fontWeight: '700',
     marginBottom: SPACING.xs,
@@ -356,6 +356,6 @@ const styles = StyleSheet.create({
   chatButtonText: {
     color: COLORS.surface,
     fontWeight: '700',
-    ...TYPOGRAPHY.body1,
+    fontSize: 16,
   },
 });

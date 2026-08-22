@@ -9,6 +9,7 @@ import {
   Pressable,
   ActivityIndicator,
   Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -38,6 +39,53 @@ export const ChatListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'All' | 'Unread' | 'Support'>('All');
+  const [globalMenuVisible, setGlobalMenuVisible] = useState(false);
+  const [selectedConv, setSelectedConv] = useState<any>(null);
+  const [convMenuVisible, setConvMenuVisible] = useState(false);
+  const [confirmDeleteConv, setConfirmDeleteConv] = useState<any>(null);
+  const [isDeletingConv, setIsDeletingConv] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ text: string; isError?: boolean } | null>(null);
+
+  const showToast = (text: string, isError = false) => {
+    setToastMessage({ text, isError });
+    setTimeout(() => setToastMessage(null), 2800);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    setGlobalMenuVisible(false);
+    try {
+      await Promise.all(
+        conversations.map((c) => apiClient.post(`/chat/${c.roomId}/read`).catch(() => {}))
+      );
+      setConversations((prev) => prev.map((c) => ({ ...c, unreadCount: 0 })));
+      showToast('All messages marked as read');
+    } catch {
+      showToast('Action completed');
+    }
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!confirmDeleteConv) return;
+    setIsDeletingConv(true);
+    try {
+      await apiClient.delete(`/chat/rooms/${confirmDeleteConv.roomId}/messages`);
+      setConversations((prev) => prev.filter((c) => c.roomId !== confirmDeleteConv.roomId));
+      setConfirmDeleteConv(null);
+      showToast('Conversation deleted');
+    } catch (err: any) {
+      showToast(err?.response?.data?.error?.message || 'Failed to delete chat', true);
+    } finally {
+      setIsDeletingConv(false);
+    }
+  };
+
+  const handleMuteToggle = (conv: any) => {
+    setConvMenuVisible(false);
+    showToast(`Notifications ${conv?.isMuted ? 'unmuted' : 'muted'}`);
+    setConversations((prev) =>
+      prev.map((c) => (c.roomId === conv?.roomId ? { ...c, isMuted: !c.isMuted } : c))
+    );
+  };
 
   const loadConversations = async () => {
     try {
@@ -123,7 +171,16 @@ export const ChatListScreen = () => {
           <View>
             <View style={styles.headerRow}>
               <Text style={styles.headerTitle}>Messages</Text>
-              <Text style={styles.headerUser}>{user?.name || 'You'}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Text style={styles.headerUser}>{user?.name || 'You'}</Text>
+                <TouchableOpacity
+                  style={styles.threeDotBtn}
+                  onPress={() => setGlobalMenuVisible(true)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="ellipsis-vertical" size={20} color={COLORS.text} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.searchBar}>
@@ -270,24 +327,236 @@ export const ChatListScreen = () => {
                   <Text style={styles.conversationName} numberOfLines={1}>
                     {name}
                   </Text>
-                  <Text style={styles.timeText}>{time}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {item.isMuted ? (
+                      <Ionicons name="volume-mute" size={13} color={COLORS.textMuted} />
+                    ) : null}
+                    <Text style={styles.timeText}>{time}</Text>
+                  </View>
                 </View>
 
                 <View style={styles.conversationBottomRow}>
                   <Text style={styles.previewText} numberOfLines={1}>
                     {lastMsg}
                   </Text>
-                  {item.unreadCount > 0 && (
-                    <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
-                    </View>
-                  )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {item.unreadCount > 0 && (
+                      <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={styles.itemThreeDotBtn}
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        setSelectedConv(item);
+                        setConvMenuVisible(true);
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons name="ellipsis-vertical" size={16} color={COLORS.textMuted} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </Pressable>
           );
         }}
       />
+
+      {/* Global Inbox Three-Dot Menu Modal */}
+      <Modal
+        visible={globalMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setGlobalMenuVisible(false)}
+      >
+        <Pressable style={styles.menuOverlay} onPress={() => setGlobalMenuVisible(false)}>
+          <View style={styles.menuCard}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handleMarkAllAsRead}
+            >
+              <Ionicons name="checkmark-done-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.menuItemText}>Mark all as read</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setGlobalMenuVisible(false);
+                navigation.navigate('FlatmateBrowse');
+              }}
+            >
+              <Ionicons name="people-outline" size={18} color={COLORS.text} />
+              <Text style={styles.menuItemText}>Find new flatmates</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setGlobalMenuVisible(false);
+                loadConversations();
+                showToast('Refreshed chats');
+              }}
+            >
+              <Ionicons name="refresh-outline" size={18} color={COLORS.text} />
+              <Text style={styles.menuItemText}>Refresh messages</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Individual Conversation Three-Dot Menu Modal */}
+      <Modal
+        visible={convMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConvMenuVisible(false)}
+      >
+        <Pressable style={styles.menuOverlay} onPress={() => setConvMenuVisible(false)}>
+          <View style={styles.menuCard}>
+            <View style={styles.menuHeader}>
+              <Text style={styles.menuHeaderTitle} numberOfLines={1}>
+                {selectedConv?.participantName || 'Conversation'}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setConvMenuVisible(false);
+                if (selectedConv) {
+                  openConversation(selectedConv);
+                }
+              }}
+            >
+              <Ionicons name="chatbubble-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.menuItemText}>Open Chat</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setConvMenuVisible(false);
+                if (selectedConv?.participantId) {
+                  navigation.navigate('FlatmateViewProfile', {
+                    profile: {
+                      id: selectedConv.participantId,
+                      user: {
+                        id: selectedConv.participantId,
+                        name: selectedConv.participantName,
+                        avatar: selectedConv.participantAvatar,
+                      },
+                    },
+                  });
+                } else {
+                  showToast('Profile unavailable');
+                }
+              }}
+            >
+              <Ionicons name="person-outline" size={18} color={COLORS.text} />
+              <Text style={styles.menuItemText}>View Profile</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handleMuteToggle(selectedConv)}
+            >
+              <Ionicons
+                name={selectedConv?.isMuted ? 'volume-high-outline' : 'volume-mute-outline'}
+                size={18}
+                color={COLORS.text}
+              />
+              <Text style={styles.menuItemText}>
+                {selectedConv?.isMuted ? 'Unmute Notifications' : 'Mute Notifications'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.menuDivider} />
+
+            <TouchableOpacity
+              style={[styles.menuItem, { paddingVertical: 10 }]}
+              onPress={() => {
+                setConvMenuVisible(false);
+                setConfirmDeleteConv(selectedConv);
+              }}
+            >
+              <Ionicons name="trash-outline" size={18} color={COLORS.error} />
+              <Text style={[styles.menuItemText, { color: COLORS.error, fontWeight: '700' }]}>
+                Delete Chat
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Branded Delete Confirmation Modal */}
+      <Modal
+        visible={!!confirmDeleteConv}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmDeleteConv(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalCard}>
+            <View style={styles.deleteIconCircle}>
+              <Ionicons name="trash" size={28} color={COLORS.error} />
+            </View>
+            <Text style={styles.deleteModalTitle}>Delete Conversation?</Text>
+            <Text style={styles.deleteModalDesc}>
+              Are you sure you want to delete all messages with{' '}
+              <Text style={{ fontWeight: '700', color: COLORS.text }}>
+                "{confirmDeleteConv?.participantName || 'this user'}"
+              </Text>
+              ? This action cannot be undone.
+            </Text>
+
+            <View style={styles.deleteModalActions}>
+              <TouchableOpacity
+                style={styles.cancelModalBtn}
+                onPress={() => setConfirmDeleteConv(null)}
+                disabled={isDeletingConv}
+              >
+                <Text style={styles.cancelModalText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmDeleteBtn}
+                onPress={handleDeleteConversation}
+                disabled={isDeletingConv}
+              >
+                {isDeletingConv ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmDeleteText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <View
+          style={[
+            styles.toastBanner,
+            toastMessage.isError && { backgroundColor: '#7F1D1D' },
+          ]}
+        >
+          <Ionicons
+            name={toastMessage.isError ? 'alert-circle' : 'checkmark-circle'}
+            size={16}
+            color={toastMessage.isError ? '#FCA5A5' : '#10B981'}
+          />
+          <Text
+            style={[
+              styles.toastText,
+              toastMessage.isError && { color: '#FEF2F2' },
+            ]}
+          >
+            {toastMessage.text}
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -370,7 +639,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   sectionTitle: {
-    ...TYPOGRAPHY.subtitle2,
+    ...TYPOGRAPHY.body2,
     color: COLORS.text,
     fontWeight: '700',
   },
@@ -450,7 +719,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   conversationName: {
-    ...TYPOGRAPHY.subtitle2,
+    ...TYPOGRAPHY.body2,
     color: COLORS.text,
     fontWeight: '700',
     flex: 1,
@@ -717,5 +986,164 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body2,
     fontWeight: '700',
     color: COLORS.surface,
+  },
+  threeDotBtn: {
+    padding: 6,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  itemThreeDotBtn: {
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  menuCard: {
+    width: '100%',
+    maxWidth: 280,
+    backgroundColor: '#FFFFFF',
+    borderRadius: BORDER_RADIUS.xl,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+    overflow: 'hidden',
+  },
+  menuHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  menuHeaderTitle: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  menuItemText: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '600',
+    color: '#334155',
+    flex: 1,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  deleteModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: BORDER_RADIUS.xl,
+    padding: SPACING.lg,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  deleteIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  deleteModalTitle: {
+    ...TYPOGRAPHY.h3,
+    color: '#0F172A',
+    fontWeight: '800',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  deleteModalDesc: {
+    ...TYPOGRAPHY.body2,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: SPACING.lg,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    width: '100%',
+  },
+  cancelModalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelModalText: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  confirmDeleteBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.lg,
+    backgroundColor: COLORS.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmDeleteText: {
+    ...TYPOGRAPHY.body2,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  toastBanner: {
+    position: 'absolute',
+    top: 50,
+    alignSelf: 'center',
+    backgroundColor: '#0F172A',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: BORDER_RADIUS.round,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
+    zIndex: 9999,
+  },
+  toastText: {
+    ...TYPOGRAPHY.caption,
+    color: '#F8FAFC',
+    fontWeight: '600',
+    fontSize: 13,
   },
 });

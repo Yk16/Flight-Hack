@@ -111,6 +111,16 @@ export class ChatService {
     }
 
     /**
+     * Clear all messages in a specific chat room
+     */
+    async clearRoomHistory(userId: number, roomId: string) {
+        await prisma.message.deleteMany({
+            where: { roomId },
+        });
+        return { success: true, roomId };
+    }
+
+    /**
      * Mark all messages in room as read
      */
     async markMessagesAsRead(userId: number, roomId: string) {

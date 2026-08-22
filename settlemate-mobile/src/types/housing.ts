@@ -29,6 +29,7 @@ export interface House {
   inquiryCount?: number;
   createdAt?: string;
   updatedAt?: string;
+  ownerId?: string | number;
   owner?: {
     id: number;
     name?: string;

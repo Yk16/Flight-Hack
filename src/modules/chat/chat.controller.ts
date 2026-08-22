@@ -58,6 +58,15 @@ export class ChatController {
         const result = await chatService.markMessagesAsRead(req.user!.userId, roomId);
         successResponse(res, result);
     });
+
+    /**
+     * DELETE /api/v1/chat/rooms/:roomId/messages
+     */
+    clearRoom = asyncHandler(async (req: Request, res: Response) => {
+        const { roomId } = req.params;
+        const result = await chatService.clearRoomHistory(req.user!.userId, roomId);
+        successResponse(res, result, 'Chat history cleared successfully');
+    });
 }
 
 export const chatController = new ChatController();

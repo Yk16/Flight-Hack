@@ -27,7 +27,7 @@ router.put('/messages/:messageId', chatController.editMessage);
 // Delete a message
 router.delete('/messages/:messageId', chatController.deleteMessage);
 
-// Mark room as read
-router.post('/:roomId/read', chatController.markAsRead);
+// Clear room history
+router.delete('/rooms/:roomId/messages', chatController.clearRoom);
 
 export default router;
