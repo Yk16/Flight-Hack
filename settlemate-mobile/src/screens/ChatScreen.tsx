@@ -177,6 +177,19 @@ export const ChatScreen = () => {
     }
 
     // Normal or Reply send flow
+    const optimisticMessage: MessageActionItem = {
+      id: Date.now(),
+      senderId: Number(user?.id || 1),
+      content: trimmed,
+      createdAt: new Date().toISOString(),
+      replyToId: replyingTo?.id,
+      replyToText: replyingTo?.content ? replyingTo.content.slice(0, 80) : undefined,
+      isRead: false,
+    };
+
+    // Optimistically add to state right away
+    setMessages((prev) => [...prev, optimisticMessage]);
+
     const payload = {
       roomId,
       content: trimmed,
@@ -184,26 +197,20 @@ export const ChatScreen = () => {
       replyToText: replyingTo?.content ? replyingTo.content.slice(0, 80) : undefined,
     };
 
-    if (socketRef.current) {
+    if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('send_message', payload);
     } else {
-      // Fallback
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          senderId: Number(user?.id || 1),
-          content: trimmed,
-          createdAt: new Date().toISOString(),
-          replyToText: payload.replyToText,
-          isRead: false,
-        },
-      ]);
+      // Fallback REST endpoint if socket temporarily disconnected
+      try {
+        await apiClient.post('/chat/messages', payload).catch(() => {});
+      } catch (e) {
+        // ignore
+      }
     }
 
     setInputText('');
     setReplyingTo(null);
-    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 80);
   };
 
   // Handle message deletion

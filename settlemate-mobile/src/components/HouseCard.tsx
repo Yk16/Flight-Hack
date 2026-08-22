@@ -2,22 +2,45 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { House } from '../types/housing';
 import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/colors';
-import { verticalScale } from '../utils/responsive';
+import { verticalScale, moderateScale } from '../utils/responsive';
+import { Ionicons } from '@expo/vector-icons';
+import { useFavoritesStore } from '../store/favoritesStore';
 
 const formatInr = (value: number) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
 interface HouseCardProps {
   house: House;
   onPress?: () => void;
+  onFavorite?: () => void;
 }
 
-export const HouseCard = ({ house, onPress }: HouseCardProps) => {
+export const HouseCard = ({ house, onPress, onFavorite }: HouseCardProps) => {
+  const { isFavorite, toggleFavorite } = useFavoritesStore();
+  const liked = isFavorite(house.id);
+
+  const handleHeartPress = () => {
+    if (onFavorite) {
+      onFavorite();
+    } else {
+      toggleFavorite(house);
+    }
+  };
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      <Image 
-        source={{ uri: house.images?.[0] || 'https://via.placeholder.com/400x250?text=No+Image+Available' }} 
-        style={styles.image} 
-      />
+      <View style={{ position: 'relative' }}>
+        <Image 
+          source={{ uri: house.images?.[0] || 'https://via.placeholder.com/400x250?text=No+Image+Available' }} 
+          style={styles.image} 
+        />
+        <TouchableOpacity
+          style={[styles.favoriteBtn, liked && { backgroundColor: 'rgba(239, 68, 68, 0.9)' }]}
+          onPress={handleHeartPress}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
       <View style={styles.content}>
         <Text style={styles.price}>{formatInr(house.rent)}<Text style={styles.period}> / month</Text></Text>
         <Text style={styles.title} numberOfLines={1}>{house.title}</Text>
@@ -108,5 +131,16 @@ const styles = StyleSheet.create({
   deposit: {
     ...TYPOGRAPHY.caption,
     color: COLORS.textMuted,
-  }
+  },
+  favoriteBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

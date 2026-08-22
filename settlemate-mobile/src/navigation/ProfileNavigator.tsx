@@ -9,6 +9,7 @@ import { HelpSupportScreen } from '../screens/HelpSupportScreen';
 import { AdminUsersScreen } from '../screens/AdminUsersScreen';
 import OwnerKycScreen from '../screens/OwnerKycScreen';
 import ProviderKycScreen from '../screens/ProviderKycScreen';
+import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { UpgradeRequestScreen } from '../screens/UpgradeRequestScreen';
 
 const Stack = createNativeStackNavigator();
@@ -17,6 +18,7 @@ export const ProfileNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ProfileHome" component={ProfileScreen} />
+      <Stack.Screen name="Favorites" component={FavoritesScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
       <Stack.Screen name="FlatmateProfile" component={FlatmateProfileScreen} />

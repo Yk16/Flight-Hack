@@ -108,7 +108,7 @@ export const HouseDetailsScreen = () => {
     }
   }, [houseId, routeHouse]);
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; isError?: boolean } | null>(null);
 
   const handleBooking = async () => {
     if (!house) return;
@@ -128,18 +128,23 @@ export const HouseDetailsScreen = () => {
       setBookingMessage('');
       setCheckInDate('');
       
-      setToastMessage('🎉 Booking request sent to the owner successfully!');
+      setToastMessage({ text: '🎉 Booking request sent to the owner successfully!' });
       setTimeout(() => {
         setToastMessage(null);
       }, 4000);
     } catch (error: any) {
       console.error('[HouseDetailsScreen] Booking error:', error);
-      const errMsg = error?.response?.data?.message || error?.message || 'Failed to create booking request';
-      if (Platform.OS === 'web') {
-        window.alert(`Error: ${errMsg}`);
-      } else {
-        Alert.alert('Error', errMsg);
-      }
+      const errMsg =
+        error?.response?.data?.error?.message ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to create booking request';
+
+      setBookingModalVisible(false);
+      setToastMessage({ text: `⚠️ ${errMsg}`, isError: true });
+      setTimeout(() => {
+        setToastMessage(null);
+      }, 4500);
     } finally {
       setBookingLoading(false);
     }
@@ -534,9 +539,25 @@ export const HouseDetailsScreen = () => {
 
       {/* Floating Toast Notification */}
       {toastMessage && (
-        <View style={styles.toastBanner}>
-          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-          <Text style={styles.toastText}>{toastMessage}</Text>
+        <View
+          style={[
+            styles.toastBanner,
+            toastMessage.isError && { backgroundColor: '#7F1D1D' },
+          ]}
+        >
+          <Ionicons
+            name={toastMessage.isError ? 'alert-circle' : 'checkmark-circle'}
+            size={20}
+            color={toastMessage.isError ? '#FCA5A5' : '#10B981'}
+          />
+          <Text
+            style={[
+              styles.toastText,
+              toastMessage.isError && { color: '#FEF2F2' },
+            ]}
+          >
+            {toastMessage.text}
+          </Text>
         </View>
       )}
     </View>

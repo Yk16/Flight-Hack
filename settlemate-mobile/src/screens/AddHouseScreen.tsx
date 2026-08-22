@@ -246,9 +246,12 @@ export const AddHouseScreen = () => {
     };
   };
 
+  const [toastMessage, setToastMessage] = useState<{ text: string; isError?: boolean } | null>(null);
+
   const onSubmit = async () => {
     if (!formData.title.trim() || !formData.addressLine1.trim() || !formData.city.trim() || !formData.state.trim() || !formData.pincode.trim()) {
-      Alert.alert("Error", "Please fill all required fields");
+      setToastMessage({ text: "Please fill all required fields", isError: true });
+      setTimeout(() => setToastMessage(null), 3000);
       return;
     }
 
@@ -258,35 +261,24 @@ export const AddHouseScreen = () => {
 
       if (editingHouseId) {
         await updateHouse(String(editingHouseId), payload);
-        const msg = "Property updated successfully!";
-        if (Platform.OS === 'web') {
-          window.alert(msg);
+        setToastMessage({ text: "🎉 Property updated successfully!" });
+        setTimeout(() => {
+          setToastMessage(null);
           navigation.navigate("Property Listing");
-        } else {
-          Alert.alert("Success", msg, [
-            { text: "OK", onPress: () => navigation.navigate("Property Listing") },
-          ]);
-        }
+        }, 1200);
       } else {
         await createHouse(payload);
-        const msg = "Property listed successfully!";
-        if (Platform.OS === 'web') {
-          window.alert(msg);
+        setToastMessage({ text: "🎉 Property listed successfully!" });
+        setTimeout(() => {
+          setToastMessage(null);
           navigation.navigate("Property Listing");
-        } else {
-          Alert.alert("Success", msg, [
-            { text: "OK", onPress: () => navigation.navigate("Property Listing") },
-          ]);
-        }
+        }, 1200);
       }
     } catch (error: any) {
       console.error("Submit error", error);
       const errMsg = error?.message || error?.response?.data?.message || "Failed to save property";
-      if (Platform.OS === 'web') {
-        window.alert(`Error: ${errMsg}`);
-      } else {
-        Alert.alert("Error", errMsg);
-      }
+      setToastMessage({ text: `⚠️ ${errMsg}`, isError: true });
+      setTimeout(() => setToastMessage(null), 4000);
     } finally {
       setLoading(false);
     }
@@ -573,6 +565,28 @@ export const AddHouseScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      {toastMessage && (
+        <View
+          style={[
+            styles.toastBanner,
+            toastMessage.isError && { backgroundColor: '#7F1D1D' },
+          ]}
+        >
+          <Ionicons
+            name={toastMessage.isError ? 'alert-circle' : 'checkmark-circle'}
+            size={20}
+            color={toastMessage.isError ? '#FCA5A5' : '#10B981'}
+          />
+          <Text
+            style={[
+              styles.toastText,
+              toastMessage.isError && { color: '#FEF2F2' },
+            ]}
+          >
+            {toastMessage.text}
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -696,4 +710,29 @@ const styles = StyleSheet.create({
   },
   dateButtonText: { color: COLORS.text, flex: 1, marginRight: SPACING.sm },
   datePlaceholder: { color: COLORS.textMuted },
+  toastBanner: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: '#064E3B',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+    zIndex: 9999,
+  },
+  toastText: {
+    ...TYPOGRAPHY.body2,
+    color: '#ECFDF5',
+    fontWeight: '700',
+    flex: 1,
+  },
 });

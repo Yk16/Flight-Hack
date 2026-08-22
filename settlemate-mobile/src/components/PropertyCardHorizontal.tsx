@@ -5,6 +5,8 @@ import { House } from '../types/housing';
 import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '../theme/colors';
 import { moderateScale, verticalScale } from '../utils/responsive';
 
+import { useFavoritesStore } from '../store/favoritesStore';
+
 const formatInr = (value: number) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
 const CARD_WIDTH = moderateScale(280);
@@ -17,6 +19,8 @@ interface PropertyCardHorizontalProps {
 
 export const PropertyCardHorizontal = ({ house, onPress, onFavorite }: PropertyCardHorizontalProps) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { isFavorite, toggleFavorite } = useFavoritesStore();
+  const liked = isFavorite(house.id);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, bounciness: 4 }).start();
@@ -24,6 +28,14 @@ export const PropertyCardHorizontal = ({ house, onPress, onFavorite }: PropertyC
 
   const handlePressOut = () => {
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, bounciness: 4 }).start();
+  };
+
+  const handleHeartPress = () => {
+    if (onFavorite) {
+      onFavorite();
+    } else {
+      toggleFavorite(house);
+    }
   };
 
   const typeBadgeLabel = (type?: string) => {
@@ -62,8 +74,12 @@ export const PropertyCardHorizontal = ({ house, onPress, onFavorite }: PropertyC
               <Text style={styles.availableText}>Available</Text>
             </View>
           ) : null}
-          <TouchableOpacity style={styles.favoriteBtn} onPress={onFavorite} activeOpacity={0.7}>
-            <Ionicons name="heart-outline" size={18} color={COLORS.surface} />
+          <TouchableOpacity
+            style={[styles.favoriteBtn, liked && { backgroundColor: 'rgba(239, 68, 68, 0.9)' }]}
+            onPress={handleHeartPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 

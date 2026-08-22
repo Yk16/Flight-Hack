@@ -76,6 +76,13 @@ export const ProfileScreen = () => {
   // Profile actions
   const quickActions = [
     {
+      id: 'favorites',
+      label: 'Saved / Favourites',
+      icon: 'heart',
+      color: '#EF4444',
+      onPress: () => navigation.navigate('Favorites'),
+    },
+    {
       id: 'transactions',
       label: 'Transaction History',
       icon: 'card',

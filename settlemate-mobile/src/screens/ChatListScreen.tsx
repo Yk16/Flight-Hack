@@ -34,19 +34,28 @@ export const ChatListScreen = () => {
   const isFocused = useIsFocused();
 
   const [conversations, setConversations] = useState<any[]>([]);
+  const [activePeople, setActivePeople] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'All' | 'Unread' | 'Support'>('All');
 
   const loadConversations = async () => {
     try {
-      const res = await apiClient.get('/chat/rooms');
-      const liveRooms = res.data?.data || res.data || [];
+      const [chatRes, flatmatesRes] = await Promise.all([
+        apiClient.get('/chat/rooms'),
+        apiClient.get('/flatmates/search?limit=10').catch(() => ({ data: { data: { profiles: [] } } })),
+      ]);
+
+      const liveRooms = chatRes.data?.data || chatRes.data || [];
+      const profiles = flatmatesRes.data?.data?.profiles || flatmatesRes.data?.profiles || [];
+
+      // Filter out current user from flatmates list
+      const otherPeople = profiles.filter((p: any) => p.user?.id !== Number(user?.id));
+      setActivePeople(otherPeople);
 
       if (liveRooms.length > 0) {
         setConversations(liveRooms);
       } else {
-        // Fallback to sample conversations if no live chats yet
         setConversations(CHAT_CONVERSATIONS);
       }
     } catch (err) {
@@ -92,6 +101,19 @@ export const ChatListScreen = () => {
     });
   };
 
+  const startChatWithPerson = (person: any) => {
+    const targetUserId = person.user?.id || person.userId;
+    const currentUserId = Number(user?.id || 1);
+    const generatedRoomId = `chat-${Math.min(currentUserId, targetUserId)}-${Math.max(currentUserId, targetUserId)}`;
+    const personName = person.user?.name || person.user?.firstName || 'Flatmate';
+
+    navigation.navigate('ChatThread', {
+      roomId: generatedRoomId,
+      recipientName: personName,
+      participantId: targetUserId,
+    });
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <FlatList
@@ -123,6 +145,46 @@ export const ChatListScreen = () => {
                 </TouchableOpacity>
               ) : null}
             </View>
+
+            {/* Actively Looking Flatmates / Direct Message Row */}
+            {activePeople.length > 0 && (
+              <View style={styles.activeSection}>
+                <View style={styles.sectionRow}>
+                  <Text style={styles.sectionTitle}>Actively Looking Flatmates</Text>
+                  <Text style={styles.sectionMeta}>{activePeople.length} online</Text>
+                </View>
+                <FlatList
+                  data={activePeople}
+                  keyExtractor={(item) => `active-${item.id}`}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.activeListContent}
+                  renderItem={({ item }) => {
+                    const name = item.user?.name || item.user?.firstName || 'User';
+                    return (
+                      <TouchableOpacity
+                        style={styles.activePersonCard}
+                        onPress={() => startChatWithPerson(item)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.activeAvatarWrap}>
+                          <View style={styles.activeAvatar}>
+                            <Text style={styles.activeAvatarText}>{getInitials(name)}</Text>
+                          </View>
+                          <View style={styles.activeGreenDot} />
+                        </View>
+                        <Text style={styles.activePersonName} numberOfLines={1}>
+                          {name.split(' ')[0]}
+                        </Text>
+                        <Text style={styles.activePersonRole} numberOfLines={1}>
+                          {item.occupation || 'Flatmate'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              </View>
+            )}
 
             <FlatList
               data={FILTERS}
@@ -405,5 +467,60 @@ const styles = StyleSheet.create({
     color: COLORS.surface,
     fontSize: 10,
     fontWeight: '700',
+  },
+
+  // Active People Strip Styles
+  activeSection: {
+    marginBottom: SPACING.md,
+  },
+  activeListContent: {
+    gap: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  activePersonCard: {
+    alignItems: 'center',
+    width: 68,
+  },
+  activeAvatarWrap: {
+    position: 'relative',
+    marginBottom: 4,
+  },
+  activeAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: `${COLORS.primary}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  activeAvatarText: {
+    ...TYPOGRAPHY.body1,
+    color: COLORS.primary,
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  activeGreenDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+  },
+  activePersonName: {
+    ...TYPOGRAPHY.caption,
+    fontWeight: '700',
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  activePersonRole: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    textAlign: 'center',
   },
 });

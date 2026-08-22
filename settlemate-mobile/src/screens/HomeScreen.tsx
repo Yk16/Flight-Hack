@@ -23,6 +23,7 @@ import { HorizontalSection } from '../components/HorizontalSection';
 import { fetchHouses } from '../api/housingApi';
 import { fetchServices } from '../api/servicesApi';
 import { searchFlatmates } from '../api/flatmateApi';
+import { useFavoritesStore } from '../store/favoritesStore';
 import { House } from '../types/housing';
 import { Service } from '../types/services';
 const MOCK_ROOMS: House[] = [
@@ -214,6 +215,7 @@ export const HomeScreen = () => {
       setHouses(hasRooms ? housesData : [...housesData, ...MOCK_ROOMS]);
       setServices(servicesData);
       setFlatmates(flatmatesResult.profiles?.length ? flatmatesResult.profiles : MOCK_FLATMATES);
+      useFavoritesStore.getState().loadFavorites();
     } catch (error) {
       console.error('[HomeScreen] Error loading data:', error);
     } finally {
@@ -835,7 +837,7 @@ export const HomeScreen = () => {
               style={styles.notifCloseBtn}
               onPress={() => setNotificationVisible(false)}
             >
-              <Text style={styles.notifCloseText}>Mark all as read</Text>
+              <Text style={styles.notifCloseBtn}>Mark all as read</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1153,7 +1155,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   filterGroupLabel: {
-    ...TYPOGRAPHY.subtitle2,
+    ...TYPOGRAPHY.body2,
     color: COLORS.text,
     fontWeight: '700',
     marginBottom: SPACING.sm,
